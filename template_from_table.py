@@ -45,7 +45,7 @@ def get_required_paths(model_name):
 
     return [main_path, edt_paths, enum_paths]
 
-def generate_template(staging_table_name, force):
+def generate_template(staging_table_name, force, output_folder):
     ignored_index_fields = ["DefinitionGroup", "ExecutionId"]
     ignored_table_fields = ["DefinitionGroup", "ExecutionId", "IsSelected", "TransferStatus"]
 
@@ -162,12 +162,44 @@ def generate_template(staging_table_name, force):
         }
         
         rows.append(row)
-    pd.DataFrame(rows).to_excel(f"{staging_table_name}.xlsx", index=False)
+    pd.DataFrame(rows).to_excel(f"{output_folder}{staging_table_name}.xlsx", index=False)
+
+def merge_excel_files(table_path):
+    file_table = pd.read_excel(table_path)
+
+    for _, row in file_table.iterrows():
+        try:
+            output_file_name = row['Data Entity']
+
+            with pd.ExcelWriter('output/merged/' + output_file_name + '.xlsx') as writer:
+                df1 = pd.read_excel('data/' + row['Data Entity'] + '.xlsx')
+                df1.to_excel(writer, sheet_name='Data', index=False)
+
+                df2 = pd.read_excel('output/' + row['Staging Table'] + '.xlsx')
+                df2.to_excel(writer, sheet_name='template', index=False)
+        except:
+            print("Failed to merge for " + output_file_name)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--force', action='store_true', help="Ignore and omit the columns which are throwing errors.")
+    parser.add_argument('-e', '--excel', help="Excel file with names of staging tables under column named Staging Table")
+    
+    # Merge the generated template with existing sample data as a new sheet.
+    # Note: Must have the sample data excel file name as a column named Data Entity in that(-e) excel
+    # And the downloaded sample data excel files should be present in a folder named data
+    parser.add_argument('-m', '--merge', action='store_true')
     args, strings = parser.parse_known_args()
-
-    for staging_table_name in strings:
-        generate_template(staging_table_name, args.force)
+    if args.excel:
+        excel_map = pd.read_excel(args.excel)
+        if not os.path.exists('output/'):
+            os.makedirs('output/')
+        for _, row in excel_map.iterrows():
+            generate_template(row["Staging Table"], args.force, 'output/')
+        if args.merge:
+            if not os.path.exists('output/merged/'):
+                os.makedirs('output/merged/')
+            merge_excel_files(args.excel)
+    else:
+        for staging_table_name in strings:
+            generate_template(staging_table_name, args.force, '')
