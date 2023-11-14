@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse
 import pandas as pd
 import xml.etree.ElementTree as ET
 
@@ -44,7 +45,7 @@ def get_required_paths(model_name):
 
     return [main_path, edt_paths, enum_paths]
 
-def generate_template(staging_table_name):
+def generate_template(staging_table_name, force):
     ignored_index_fields = ["DefinitionGroup", "ExecutionId"]
     ignored_table_fields = ["DefinitionGroup", "ExecutionId", "IsSelected", "TransferStatus"]
 
@@ -73,6 +74,8 @@ def generate_template(staging_table_name):
         data_type = field.get('{http://www.w3.org/2001/XMLSchema-instance}type').replace('AxTableField', '')
 
         string_size = field.find('StringSize')
+        if string_size is not None: 
+            string_size = string_size.text
         if data_type == "String" and string_size is None:
             edt = field.find('ExtendedDataType').text
 
@@ -82,28 +85,42 @@ def generate_template(staging_table_name):
                     edt_root = ET.parse(full_path).getroot()
                     break
             else:
-                print("Error: Could not find EDT: " + edt)
-                exit(-1)
+                print("Error: Could not find EDT: " + edt + " for table field: " + name)
+                if force: 
+                   continue
+                else:
+                   exit(-1)
                     
-            string_size = edt_root.find("StringSize") #TODO: write logic for memo
+            string_size = edt_root.find("StringSize")
             while string_size is None:
                 edt = edt_root.find("Extends")
                 if edt is None:
-                    string_size = "10" #If they dont mention it anywhere it defaults to 10
+                    string_size = "10"
                     break
                 edt = edt.text
-
+                if edt == 'UserId':
+                    string_size = "20"
+                    break
+                elif edt == 'ClassName':
+                    string_size = "120"
+                    break
                 for edt_path in edt_paths:
                     full_path = f"{edt_path}/{edt}.xml"
                     if os.path.exists(full_path):
                         edt_root = ET.parse(full_path).getroot()
                         break
                 else:
-                    print("Error: Could not find EDT: " + edt)
-                    exit(-1)
+                    print("Error: Could not find EDT: " + edt + " for table field: " + name)
+                    if force: 
+                        continue
+                    else:
+                        exit(-1)
                 string_size = edt_root.find("StringSize")
+
             if not isinstance(string_size, str):
                 string_size = string_size.text
+            if string_size == '-1':
+                string_size = 'MEMO'
 
         is_unique = "Yes" if name in unique_fields else "No"
 
@@ -121,9 +138,12 @@ def generate_template(staging_table_name):
                         enum_root = ET.parse(full_path).getroot()
                         break
                 else:
-                    print("Error: Could not find base Enum: " + enum_type)
-                    exit(-1)
-                
+                    print("Error: Could not find base Enum: " + enum_type + " for table field: " + name)
+                    if(force): 
+                        continue
+                    else:
+                        exit(-1)
+                    
                 names = [value.find('Name').text for value in enum_root.findall('.//AxEnumValue')]
                 enum_values = ', '.join(names)
         else:
@@ -136,7 +156,7 @@ def generate_template(staging_table_name):
             'Data type': data_type,
             'Length': string_size if string_size is not None else 'NULL',
             'IsUniqueField': is_unique,
-            'IsNullable': "No",  # By default and always I think, right?
+            'IsNullable': "No",
             'EnumValues': enum_values,
             'Mandatory': mandatory.text if mandatory is not None else 'No'
         }
@@ -145,5 +165,9 @@ def generate_template(staging_table_name):
     pd.DataFrame(rows).to_excel(f"{staging_table_name}.xlsx", index=False)
 
 if __name__ == "__main__":
-    for staging_table_name in sys.argv[1:]:
-        generate_template(staging_table_name)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--force', action='store_true', help="Ignore and omit the columns which are throwing errors.")
+    args, strings = parser.parse_known_args()
+
+    for staging_table_name in strings:
+        generate_template(staging_table_name, args.force)
