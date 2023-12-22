@@ -1,5 +1,4 @@
 import os
-import sys
 import argparse
 import pandas as pd
 import xml.etree.ElementTree as ET
@@ -45,7 +44,11 @@ def get_required_paths(model_name):
 
     return [main_path, edt_paths, enum_paths]
 
-def generate_template(staging_table_name, force, output_folder):
+# Some EDTs are present in the System Documentation section of the AOT and cant be found.
+# The string size values for these EDTs are hardcoded as a python dictionary.
+edt_from_docs = {'UserId': 20, 'ClassName': 120, 'SelectableDataArea': 4}
+enum_from_docs = {'NoYes': 'No, Yes', 'Timezone': 'Timezone'}
+def generate_template(staging_table_name, force):
     ignored_index_fields = ["DefinitionGroup", "ExecutionId"]
     ignored_table_fields = ["DefinitionGroup", "ExecutionId", "IsSelected", "TransferStatus"]
 
@@ -54,6 +57,7 @@ def generate_template(staging_table_name, force, output_folder):
 
     root = ET.parse(f"{main_path}/{staging_table_name}.xml").getroot()
     
+    indexes = []
     unique_fields = []
     for index in root.find('Indexes').findall('AxTableIndex'):
         filtered_fields = [
@@ -61,9 +65,10 @@ def generate_template(staging_table_name, force, output_folder):
             for f in index.find('Fields').findall('AxTableIndexField') 
             if f.find('DataField').text not in ignored_index_fields
         ]
-        if len(filtered_fields) == 1:
-            unique_fields.extend(filtered_fields)
-
+        if index.find('AlternateKey').text == 'Yes':
+            indexes.append(tuple(filtered_fields))
+            if len(filtered_fields) == 1:
+                unique_fields.extend(filtered_fields)
 
     rows = []
     for field in root.find('Fields').findall('AxTableField'):
@@ -73,52 +78,56 @@ def generate_template(staging_table_name, force, output_folder):
         
         data_type = field.get('{http://www.w3.org/2001/XMLSchema-instance}type').replace('AxTableField', '')
 
+        # If string size is directly available in the staging table, awesome!
         string_size = field.find('StringSize')
         if string_size is not None: 
             string_size = string_size.text
+        
+        # If it is not available, make sure its a FieldString before looking into its EDT
         if data_type == "String" and string_size is None:
             edt = field.find('ExtendedDataType').text
-
-            for edt_path in edt_paths:
-                full_path = f"{edt_path}/{edt}.xml"
-                if os.path.exists(full_path):
-                    edt_root = ET.parse(full_path).getroot()
-                    break
+            # If the EDT is from the System Documentation, search in the hardcoded dict.
+            if edt in edt_from_docs:
+                string_size = edt_from_docs[edt]
+            # Else locate the EDT file and parse the string size from that file.
             else:
-                print("Error: Could not find EDT: " + edt + " for table field: " + name)
-                if force: 
-                   continue
-                else:
-                   exit(-1)
-                    
-            string_size = edt_root.find("StringSize")
-            while string_size is None:
-                edt = edt_root.find("Extends")
-                if edt is None:
-                    string_size = "10"
-                    break
-                edt = edt.text
-                if edt == 'UserId':
-                    string_size = "20"
-                    break
-                elif edt == 'ClassName':
-                    string_size = "120"
-                    break
                 for edt_path in edt_paths:
                     full_path = f"{edt_path}/{edt}.xml"
                     if os.path.exists(full_path):
                         edt_root = ET.parse(full_path).getroot()
                         break
                 else:
-                    print("Error: Could not find EDT: " + edt + " for table field: " + name)
+                    print(f"Error: Could not find EDT: {edt} for table(field): {staging_table_name}({name})")
                     if force: 
                         continue
                     else:
                         exit(-1)
-                string_size = edt_root.find("StringSize")
+                if(edt_root.find("StringSize") is not None):
+                    string_size = edt_root.find("StringSize").text
 
-            if not isinstance(string_size, str):
-                string_size = string_size.text
+            #If it is not even directly available in the immediate field EDT, 
+            #then we need to search for the parent which contains this information.
+            while string_size is None:
+                edt = edt_root.find("Extends")
+                #In case no parent has the information, the default string size in X++ is 10.
+                if edt is None:
+                    string_size = "10"
+                    break
+                edt = edt.text
+                for edt_path in edt_paths:
+                    full_path = f"{edt_path}/{edt}.xml"
+                    if os.path.exists(full_path):
+                        edt_root = ET.parse(full_path).getroot()
+                        break
+                else:
+                    print(f"Error: Could not find EDT: {edt} for table(field): {staging_table_name}({name})")
+                    if force: 
+                        continue
+                    else:
+                        exit(-1)
+                if(edt_root.find("StringSize") is not None):
+                    string_size = edt_root.find("StringSize").text
+            #There is no limit to the length of the string.
             if string_size == '-1':
                 string_size = 'MEMO'
 
@@ -127,10 +136,8 @@ def generate_template(staging_table_name, force, output_folder):
         if data_type == "Enum":
             enum_type = field.find('EnumType').text
 
-            if enum_type == "NoYes":
-                enum_values = "No, Yes"
-            elif enum_type == "Timezone":
-                enum_values = "Timezone"
+            if enum_type in enum_from_docs:
+                enum_values = enum_from_docs[enum_type]
             else:
                 for enum_path in enum_paths:
                     full_path = F"{enum_path}/{enum_type}.xml"
@@ -162,7 +169,7 @@ def generate_template(staging_table_name, force, output_folder):
         }
         
         rows.append(row)
-    pd.DataFrame(rows).to_excel(f"{output_folder}{staging_table_name}.xlsx", index=False)
+    return (rows, indexes)
 
 def merge_excel_files(table_path):
     file_table = pd.read_excel(table_path)
@@ -195,11 +202,13 @@ if __name__ == "__main__":
         if not os.path.exists('output/'):
             os.makedirs('output/')
         for _, row in excel_map.iterrows():
-            generate_template(row["Staging Table"], args.force, 'output/')
+            rows = generate_template(row["Staging Table"], args.force)[0]
+            pd.DataFrame(rows).to_excel(f"output/{row["Staging Table"]}.xlsx", index=False)
         if args.merge:
             if not os.path.exists('output/merged/'):
                 os.makedirs('output/merged/')
             merge_excel_files(args.excel)
     else:
         for staging_table_name in strings:
-            generate_template(staging_table_name, args.force, '')
+            rows = generate_template(staging_table_name, args.force)[0]
+            pd.DataFrame(rows).to_excel(f"{staging_table_name}.xlsx", index=False)
