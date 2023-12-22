@@ -4,7 +4,7 @@ from bidict import bidict
 
 from template_from_table import generate_template
 
-GLOBAL_LOG_LEVEL = 2
+GLOBAL_LOG_LEVEL = 1
 def log(message, logLevel):
     if logLevel > GLOBAL_LOG_LEVEL:
         print(message)
@@ -20,32 +20,32 @@ def validateIndexIntegrity(df, indexes, excel_to_d365_mapping):
             duplicates_found = True
     return duplicates_found
 
-def validateOtherFields(df, other_fields):
-    for other_column_name in other_fields:
-        df = df[(df[other_column_name] != "")]
-        error_df = df[~(df[other_column_name] != "")]
-        if error_df.shape[0] > 0:
-            log(f"\nERROR - {other_column_name} is a non string field which was empty", 3)
-            log(f"{error_df[other_column_name]}\n", 3)
-    return df
-
 def validateStringFields(df, string_columns_with_size):
     for string_column_name, size in string_columns_with_size:
-        df = df[(df[string_column_name].str.len() <= int(size))]
-        error_df = df[~(df[string_column_name].str.len() <= int(size))]
+        result_df = df[(df[string_column_name].str.len() <= int(size))]
+        error_df = df[(df[string_column_name].str.len() > int(size))]
         if error_df.shape[0] > 0:
             log(f"\nERROR - {string_column_name} has rows whose string length exceeds the max: {size}", 3)
             log(f"{error_df[string_column_name]}\n", 3)
-    return df
+    return result_df
 
 def validateEnumFields(df, enum_names_with_values):
     for enum_column_name, values in enum_names_with_values:
-        df = df[df[enum_column_name].isin(values)]
+        result_df = df[df[enum_column_name].isin(values)]
         error_df = df[~df[enum_column_name].isin(values)]
         if error_df.shape[0] > 0:
             log(f"\nERROR - {enum_column_name} has values which are not in the enum:\n{values}", 3)
             log(f"{error_df[enum_column_name]}\n", 3)
-    return df
+    return result_df
+
+def validateOtherFields(df, other_fields):
+    for other_column_name in other_fields:
+        result_df = df[(df[other_column_name] != "")]
+        error_df = df[~(df[other_column_name] != "")]
+        if error_df.shape[0] > 0:
+            log(f"ERROR - {other_column_name} is a non string field which was empty", 3)
+            log(f"{error_df[other_column_name]}\n", 3)
+    #return result_df
 
 def validate_data(df, staging_table_name):
     template, indexes = generate_template(staging_table_name, True)
@@ -96,12 +96,13 @@ def validate_data(df, staging_table_name):
     validateIndexIntegrity(df, indexes, excel_to_d365_mapping)
 
     log("\nINFO - Checking whether dataset follows string size constraints...", 1)
-    validateStringFields(df.copy(), string_columns_with_size)
+    validateStringFields(df, string_columns_with_size)
 
     log("\nINFO - Checking whether dataset enum values columns contain permissible values...", 1)
-    validateEnumFields(df.copy(), enum_names_with_values)
+    validateEnumFields(df, enum_names_with_values)
 
-    validateOtherFields(df.copy(), other_fields)
+    log("\nINFO - Checking whether there are any empty non string values...", 1)
+    validateOtherFields(df, other_fields)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
