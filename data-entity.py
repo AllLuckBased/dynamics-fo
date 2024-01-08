@@ -1,4 +1,5 @@
 import os
+import argparse
 import pandas as pd
 import xml.etree.ElementTree as ET
 
@@ -50,35 +51,31 @@ def get_all_data_sources(entity_name):
         data_source = index.find('DataSource')
         if data_source is not None:        
             if 'Entity' in data_source.text:
-                new_field_table_map = get_all_data_sources(data_source.text)
-                try:
-                    field_table_map[name_text] = new_field_table_map[name_text]
-                except:
-                    try:
-                        field_table_map[f"{name_text}({data_field.text})"] = new_field_table_map[data_field.text]
-                    except:
-                        print("Failed to find mapping for field name: " + name_text)
-                        field_table_map[name_text] = ''
+                return get_all_data_sources(data_source.text)
             else:
-                field_table_map[name_text] = data_source.text
+                field_table_map[name_text] = [data_source.text, data_field.text]
         else:
             field_table_map[f"{name_text}"] = '??'
     return field_table_map
 
 
-search_term = "InventQualityTestEntity"
-field_table_map = get_all_data_sources(search_term)
-
-rows = []
-for field_name in field_table_map:
-    if "??" in field_table_map[field_name]:
-         rows.append({
-          'Source Table': '',
-          'Source Field': '',
-        })
-    else:
-        rows.append({
-            'Source Table': field_table_map[field_name],
-            'Source Field': field_name
-        })
-pd.DataFrame(rows).to_excel(f"test.xlsx", index=False)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    _, strings = parser.parse_known_args()
+    for entity_name in strings:
+        field_table_map = get_all_data_sources(entity_name)
+        rows = []
+        for field_name in field_table_map:
+            if "??" in field_table_map[field_name]:
+                rows.append({
+                'Source Table': '',
+                'Source Field': '',
+                'Entity Field': field_name
+                })
+            else:
+                rows.append({
+                    'Source Table': field_table_map[field_name][0],
+                    'Source Field': field_table_map[field_name][1],
+                    'Entity Field': field_name
+                })
+        pd.DataFrame(rows).to_excel(f"{entity_name}.xlsx", index=False)
