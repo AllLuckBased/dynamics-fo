@@ -54,7 +54,6 @@ enum_from_docs = {
 }
 
 def generate_template(staging_table_name, force):
-    #print(staging_table_name)
     staging_table_name = verifyStagingTable(staging_table_name)
     ignored_index_fields = ['DefinitionGroup', 'ExecutionId', 'RecId']
     ignored_table_fields = ['DefinitionGroup', 'ExecutionId', 'IsSelected', 'TransferStatus']
@@ -207,10 +206,6 @@ def merge_excel_files(input_excel, path_to_sample_data):
             print('Failed to merge for ' + row['Data Entity'])
 
 if __name__ == '__main__':
-    staging_table_name = 'EcoResCategoryTaxInformationAssignmentStaging'
-    template_rows = generate_template(staging_table_name, False)
-    print(f'Unique indexes:\n{template_rows[1]}')
-    pd.DataFrame(template_rows[0]).to_excel(f'{staging_table_name}.xlsx', index=False)
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--merge', help='Pass the path to the sample data folder.')
     parser.add_argument('-e', '--excel', help='Pass "" to generate excel template required in this program.')
@@ -227,4 +222,9 @@ if __name__ == '__main__':
         if args.merge:
             merge_excel_files(args.excel, args.merge)
     elif args.excel == '':
-        pass
+        pd.DataFrame(columns=['Data Entity', 'Staging Table']).to_excel('entity_input.xlsx', index=False)
+    else:
+        for staging_table_name in strings:
+            template_rows = generate_template(staging_table_name, False)
+            pd.DataFrame(template_rows[0]).to_excel(f'{staging_table_name}.xlsx', index=False)
+    

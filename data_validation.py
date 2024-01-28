@@ -1,4 +1,5 @@
 import os
+import sys
 import argparse
 import pandas as pd
 from bidict import bidict
@@ -8,21 +9,16 @@ from template_from_table import generate_template
 GLOBAL_LOG_LEVEL = 2
 log_file_path = 'log.txt'
 failed_with_errors = False
-def resetLogPath(_log_file_path, _GLOBAL_LOG_LEVEL = 0):
-    global log_file_path, failed_with_errors, GLOBAL_LOG_LEVEL
-    log_file_path = _log_file_path
-    failed_with_errors = False
-    if(_GLOBAL_LOG_LEVEL):
-        GLOBAL_LOG_LEVEL = _GLOBAL_LOG_LEVEL
 
 def log(message, logLevel):
     global GLOBAL_LOG_LEVEL, log_file_path, failed_with_errors
     if logLevel > GLOBAL_LOG_LEVEL:
-        with open(log_file_path, 'a') as log_file:
+        with open(log_file_path, 'a', encoding='utf-8') as log_file:
             log_file.write(message + '\n')
     if logLevel > 2:
         failed_with_errors = True
 
+index_violations = []
 def validateIndexIntegrity(df, result_df, indexes, excel_to_d365_mapping):
     for index in indexes:
         data_columns_indices = list(excel_to_d365_mapping.inverse[x] for x in index)
@@ -31,25 +27,32 @@ def validateIndexIntegrity(df, result_df, indexes, excel_to_d365_mapping):
         result_df = result_df[~result_df.duplicated(subset=data_columns_indices, keep=False)]
         error_df = df[df.duplicated(subset=data_columns_indices, keep=False)]
         if error_df.shape[0] > 0:
-            log(f'\nERROR - {data_columns_indices} has duplicate values:', 4)
+            index_violations.append((index, error_df.index.tolist()))
+            log(f'\nERROR - {data_columns_indices} has duplicate values:', 3)
             log(f'{error_df[data_columns_indices]}\n', 3)
     return result_df
 
-def validateStringFields(df, result_df, string_columns_with_size):
+string_size_violations = []
+def validateStringFields(df, result_df, string_columns_with_size, skip_violations):
     for string_column_name, size in string_columns_with_size:
         result_df = result_df[(result_df[string_column_name].str.len() <= int(size))]
         error_df = df[(df[string_column_name].str.len() > int(size))]
         if error_df.shape[0] > 0:
-            log(f'\nERROR - {string_column_name} has rows whose string length exceeds the max: {size}', 4)
+            if not skip_violations:
+                string_size_violations.append((string_column_name, size))
+            log(f'\nERROR - {string_column_name} has rows whose string length exceeds the max: {size}', 3)
             log(f'{error_df[string_column_name]}\n', 3)
     return result_df
 
-def validateEnumFields(df, result_df, enum_names_with_values):
+enum_violations = []
+def validateEnumFields(df, result_df, enum_names_with_values, skip_violations):
     for enum_column_name, values in enum_names_with_values:
         result_df = result_df[result_df[enum_column_name].isin(values)]
         error_df = df[~df[enum_column_name].isin(values)]
         if error_df.shape[0] > 0:
-            log(f'\nERROR - {enum_column_name} has values which are not in the enum:\n{values}', 4)
+            if not skip_violations:
+                enum_violations.append((enum_column_name, error_df[enum_column_name].unique().tolist()))
+            log(f'\nERROR - {enum_column_name} has values which are not in the enum:\n{values}', 3)
             log(f'{error_df[enum_column_name]}\n', 3)
     return result_df
 
@@ -57,14 +60,22 @@ def validateOtherFields(df, result_df, other_fields):
     for other_column_name in other_fields:
         error_df = df[~(df[other_column_name] != '')]
         if error_df.shape[0] > 0:
-            log(f'WARN - {other_column_name} is a non string field which was empty', 3)
+            log(f'WARN - {other_column_name} is a non string field which was empty', 2)
             log(f'{error_df[other_column_name]}\n', 2)
     return result_df
 
-i = 0
+def resetLogPath(_log_file_path, _GLOBAL_LOG_LEVEL = 0):
+    global log_file_path, failed_with_errors, GLOBAL_LOG_LEVEL
+    global enum_violations, string_size_violations, index_violations
+    log_file_path = _log_file_path
+    failed_with_errors = False
+    if(_GLOBAL_LOG_LEVEL):
+        GLOBAL_LOG_LEVEL = _GLOBAL_LOG_LEVEL
+    enum_violations = []
+    index_violations = []
+    string_size_violations = []
+
 def validate_data(df, staging_table_name, skipIndexCheck = False):
-    global i
-    i+=1
     template, indexes = generate_template(staging_table_name, True)
     excel_to_d365_mapping = bidict({})
     string_columns_with_size = []
@@ -84,7 +95,8 @@ def validate_data(df, staging_table_name, skipIndexCheck = False):
 
                 if row['Data type'] == 'String':
                     df[data_column] = df[data_column].astype(str)
-                    string_columns_with_size.append((data_column, int(row['Length'])))
+                    string_columns_with_size.append((data_column, 
+                        int(row['Length'] if row['Length'] != 'MEMO' else sys.maxsize)))
                 elif row['Data type'] == 'Enum':
                     df[data_column] = df[data_column].astype(str)
                     enum_names_with_values.append((data_column, row['EnumValues'].split(', ')))
@@ -115,10 +127,10 @@ def validate_data(df, staging_table_name, skipIndexCheck = False):
         result_df = validateIndexIntegrity(df, result_df, indexes, excel_to_d365_mapping)
 
     log('\nINFO - Checking whether dataset follows string size constraints...', 1)
-    result_df = validateStringFields(df, result_df, string_columns_with_size)
+    result_df = validateStringFields(df, result_df, string_columns_with_size, skipIndexCheck)
 
     log('\nINFO - Checking whether dataset enum values columns contain permissible values...', 1)
-    result_df = validateEnumFields(df, result_df, enum_names_with_values)
+    result_df = validateEnumFields(df, result_df, enum_names_with_values, skipIndexCheck)
 
     log('\nINFO - Checking whether there are any empty non string values...', 1)
     result_df = validateOtherFields(df, result_df, other_fields)
@@ -128,6 +140,8 @@ def validate_data(df, staging_table_name, skipIndexCheck = False):
 def handleCSVFile(input_data_file, staging_table_name, companies_to_consider, log_level):
     input_df = pd.read_csv(f'data/{input_data_file}', keep_default_na=False)
     entity_name = input_data_file[:-len('.csv')]
+    rows = []
+
     if not os.path.exists(f'output/{entity_name}/'):
         os.makedirs(f'output/{entity_name}/')
     try:
@@ -143,6 +157,10 @@ def handleCSVFile(input_data_file, staging_table_name, companies_to_consider, lo
 
                         grouped = input_df.groupby(column)
                         for category, group_df in grouped:
+                            if category == '':
+                                resetLogPath(f'output/{entity_name}/overall_report.txt', 2)
+                                log(f'ERROR: Empty values found under dataareaid for {entity_name}.', 3)
+                                continue
                             if companies_to_consider and category.lower() not in companies_to_consider:
                                 continue
                             group_df.to_excel(raw_writer, sheet_name=category, index=False)
@@ -152,19 +170,41 @@ def handleCSVFile(input_data_file, staging_table_name, companies_to_consider, lo
                                 valid_legal_entities.append(category)
                             else:
                                 invalid_legal_entities.append(category)
+                            
+                            rows.append({
+                                'Entity Name': entity_name,
+                                'dataareaid': category,
+                                'Enum violations': enum_violations,
+                                'Index violations': index_violations,
+                                'String size violations': string_size_violations,
+                            })
 
-                        resetLogPath(f'output/{entity_name}/overall_report.txt', 3)
-                        log(f'Following legal entity data was found valid:\n{valid_legal_entities}', 4)
-                        log(f'Following legal entity data was found invalid:\n{invalid_legal_entities}', 4)
+                        resetLogPath(f'output/{entity_name}/overall_report.txt', 2)
+                        log(f'Following legal entity data was found valid:\n{valid_legal_entities}', 3)
+                        log(f'Following legal entity data was found invalid:\n{invalid_legal_entities}', 3)
                         
                         validate_data(input_df, staging_table_name, True)
                         break
                 else:
                     resetLogPath(f'output/{entity_name}/log.txt', log_level)
-                    result_df = validate_data(input_df, staging_table_name)
-                    result_df.to_excel(valid_writer, sheet_name=entity_name, index=False)
+                    validate_data(input_df, staging_table_name).to_excel(valid_writer, sheet_name=entity_name, index=False)
+                    rows.append({
+                        'Entity Name': entity_name,
+                        'dataareaid': '',
+                        'Enum violations': enum_violations,
+                        'Index violations': index_violations,
+                        'String size violations': string_size_violations,
+                    })
     except Exception as e:
         print(f'Failed to parse data from {input_data_file}\n{e}')
+    
+    new_errors = pd.DataFrame(rows)
+    overall_report_path = f'output/overall_report.xlsx'
+    if os.path.exists(overall_report_path):
+        prev_errors = pd.read_excel(overall_report_path, keep_default_na=False)
+        pd.concat([prev_errors, new_errors], ignore_index=True).to_excel(overall_report_path, index=False)
+    else:
+        new_errors.to_excel(overall_report_path, index=False)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -179,10 +219,7 @@ if __name__ == '__main__':
             2 - Errors    
     ''')
 
-    args, strings = parser.parse_known_args()
-    args.log_level = 2
-    args.staging = "LedgerJournalNameStaging"
-    args.data_file = "Journal names.csv"
+    args, _ = parser.parse_known_args()
     if args.excel:
         inputs = pd.read_excel(args.excel)
         for _, row in inputs.iterrows():
