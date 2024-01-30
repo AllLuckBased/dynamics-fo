@@ -144,7 +144,7 @@ def resetLogPath(_log_file_path, _GLOBAL_LOG_LEVEL = 0):
     mandatory_columns_violation = []
 
 def handleCSVFile(input_data_file, staging_table_name, companies_to_consider, log_level):
-    input_df = pd.read_csv(f'data/{input_data_file}', keep_default_na=False)
+    input_df = pd.read_csv(f'data/{input_data_file}', keep_default_na=False, low_memory=False)
     entity_name = input_data_file[:-len('.csv')]
     rows = []
 
@@ -171,7 +171,7 @@ def handleCSVFile(input_data_file, staging_table_name, companies_to_consider, lo
                             group_df.to_excel(raw_writer, sheet_name=category, index=False)
                             resetLogPath(f'output/{entity_name}/logs/{category}.txt', log_level)
                             valid_data = validate_data(group_df, staging_table_name)
-                            if valid_data:
+                            if valid_data is not None:
                                 valid_data.to_excel(valid_writer, sheet_name=category, index=False)
                             if not failed_with_errors:
                                 valid_legal_entities.append(category)
@@ -196,7 +196,7 @@ def handleCSVFile(input_data_file, staging_table_name, companies_to_consider, lo
                 else:
                     resetLogPath(f'output/{entity_name}/log.txt', log_level)
                     valid_data = validate_data(input_df, staging_table_name)
-                    if valid_data:
+                    if valid_data is not None:
                         valid_data.to_excel(valid_writer, sheet_name=entity_name, index=False)
                     rows.append({
                         'Entity Name': entity_name,
