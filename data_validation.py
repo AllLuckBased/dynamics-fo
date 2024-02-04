@@ -19,6 +19,69 @@ def log(message, logLevel):
     if logLevel > 2:
         failed_with_errors = True
 
+
+def initialDFTemplateParsing(df, template):
+    excel_to_d365_mapping = bidict({})
+    string_columns_with_size = []
+    enum_names_with_values = []
+    mandatory_columns = []
+    
+    for row in template:
+        found = False
+        is_mandatory = row['Mandatory'] == 'Yes'
+        d365_column_name = row['D365 Column Name']
+
+        if is_mandatory:
+            mandatory_columns.append(d365_column_name)
+        
+        for data_column in df.columns:
+            match = data_column.lower() == d365_column_name.lower()
+            if match:
+                found = True
+                excel_to_d365_mapping[data_column] = d365_column_name
+
+                if row['Data type'] == 'String':
+                    df[data_column] = df[data_column].astype(str)
+                    string_columns_with_size.append((data_column, 
+                        int(row['Length'] if row['Length'] != 'MEMO' else sys.maxsize)))
+                elif row['Data type'] == 'Enum':
+                    enum_names_with_values.append((data_column, row['EnumValues'].split(', ')))
+                log(f'INFO - "{d365_column_name}" was found in the data', 1)
+                break
+
+        if not found and is_mandatory:
+            log(f'ERROR - Mandatory column "{d365_column_name}" was missing from the data!', 3)
+            mandatory_columns_violation.append(d365_column_name)
+            return
+        elif not found:
+            log(f'WARN - "{d365_column_name}" was missing from the data but is not mandatory', 2)
+    
+    unmapped_data_fields = []
+    for data_column in df.columns:
+        if not data_column in excel_to_d365_mapping:
+            unmapped_data_fields.append(data_column)
+    if not len(unmapped_data_fields) == 0:
+        log(f'\nINFO - Fields from the data which are not mapped are:', 1)
+        for field in unmapped_data_fields:
+            log('\t' + field, 1)
+    else:
+        log('INFO - All data fields were successfully mapped to a d365 entity field.', 1)
+
+    return (excel_to_d365_mapping, mandatory_columns, string_columns_with_size, enum_names_with_values)
+
+mandatory_columns_violation = []
+def validateMandatoryFields(df, result_df, mandatory_columns, excel_to_d365_mapping, skip_violations):
+    for d365_column_name in mandatory_columns:
+        mandatory_column_name = excel_to_d365_mapping.inverse[d365_column_name]
+        result_df = result_df[(result_df[mandatory_column_name].str.len() > 0)]
+        error_df = df[(df[mandatory_column_name].str.len() == 0)]
+        if error_df.shape[0] > 0:
+            if not skip_violations:
+                mandatory_columns_violation.append(mandatory_column_name)
+            log(f'\nERROR - {mandatory_column_name} cant have empty values since it is mandatory', 3)
+            log(f'{error_df[mandatory_column_name]}\n', 3)
+    return result_df
+
 index_violations = []
 def validateIndexIntegrity(df, result_df, indexes, excel_to_d365_mapping):
     for index in indexes:
@@ -48,8 +111,15 @@ def validateStringFields(df, result_df, string_columns_with_size, skip_violation
 enum_violations = []
 def validateEnumFields(df, result_df, enum_names_with_values, skip_violations):
     for enum_column_name, values in enum_names_with_values:
-        result_df = result_df[result_df[enum_column_name].isin(values)]
-        error_df = df[~df[enum_column_name].isin(values)]
+        if df[enum_column_name].dtype in (int, 'int64', 'int32', 'int16', 'int8'):
+            result_df = result_df[result_df[enum_column_name] < len(values)]
+            error_df = df[~df[enum_column_name] < len(values)]
+        else:
+            df[enum_column_name] = df[enum_column_name].astype(str)
+            result_df[enum_column_name] = result_df[enum_column_name].astype(str)
+            result_df = result_df[result_df[enum_column_name].isin(values)]
+            error_df = df[~df[enum_column_name].isin(values)]
+        
         if error_df.shape[0] > 0:
             if not skip_violations:
                 enum_violations.append((enum_column_name, error_df[enum_column_name].unique().tolist()))
@@ -57,65 +127,15 @@ def validateEnumFields(df, result_df, enum_names_with_values, skip_violations):
             log(f'{error_df[enum_column_name]}\n', 3)
     return result_df
 
-def validateOtherFields(df, result_df, other_fields):
-    for other_column_name in other_fields:
-        error_df = df[~(df[other_column_name] != '')]
-        if error_df.shape[0] > 0:
-            log(f'WARN - {other_column_name} is a non string field which was empty', 2)
-            log(f'{error_df[other_column_name]}\n', 2)
-    return result_df
-
-mandatory_columns_violation = []
 def validate_data(df, staging_table_name, skipIndexCheck = False):
     template, indexes = generate_template(staging_table_name, True)
-    excel_to_d365_mapping = bidict({})
-    string_columns_with_size = []
-    enum_names_with_values = []
-    other_fields = []
-    
-    for row in template:
-        found = False
-        is_mandatory = row['Mandatory'] == 'Yes'
-        d365_column_name = row['D365 Column Name']
-        
-        for data_column in df.columns:
-            match = data_column.lower() == d365_column_name.lower()
-            if match:
-                found = True
-                excel_to_d365_mapping[data_column] = d365_column_name
+    excel_to_d365_mapping, mandatory_columns, string_columns_with_size, enum_names_with_values = \
+        initialDFTemplateParsing(df, template)
 
-                if row['Data type'] == 'String':
-                    df[data_column] = df[data_column].astype(str)
-                    string_columns_with_size.append((data_column, 
-                        int(row['Length'] if row['Length'] != 'MEMO' else sys.maxsize)))
-                elif row['Data type'] == 'Enum':
-                    df[data_column] = df[data_column].astype(str)
-                    enum_names_with_values.append((data_column, row['EnumValues'].split(', ')))
-                else:
-                    other_fields.append(data_column)
-                log(f'INFO - "{d365_column_name}" was found in the data', 1)
-                break
-
-        if not found and is_mandatory:
-            log(f'ERROR - Mandatory column "{d365_column_name}" was missing from the data!', 3)
-            mandatory_columns_violation.append(d365_column_name)
-            return
-        elif not found:
-            log(f'WARN - "{d365_column_name}" was missing from the data but is not mandatory', 2)
-    
-    unmapped_data_fields = []
-    for data_column in df.columns:
-        if not data_column in excel_to_d365_mapping:
-            unmapped_data_fields.append(data_column)
-    if not len(unmapped_data_fields) == 0:
-        log(f'\nINFO - Fields from the data which are not mapped are:', 1)
-        for field in unmapped_data_fields:
-            log('\t' + field, 1)
-    else:
-        log('INFO - All data fields were successfully mapped to a d365 entity field.', 1)
-
-    
     result_df = df.copy()
+    log('\nINFO - Checking whether dataset has all mandatory fields for every row...', 1)
+    result_df = validateMandatoryFields(df, result_df, mandatory_columns, excel_to_d365_mapping, skipIndexCheck)
+
     if not skipIndexCheck:
         log('\nINFO - Checking for index integrity...', 1)
         result_df = validateIndexIntegrity(df, result_df, indexes, excel_to_d365_mapping)
@@ -125,9 +145,6 @@ def validate_data(df, staging_table_name, skipIndexCheck = False):
 
     log('\nINFO - Checking whether dataset enum values columns contain permissible values...', 1)
     result_df = validateEnumFields(df, result_df, enum_names_with_values, skipIndexCheck)
-
-    log('\nINFO - Checking whether there are any empty non string values...', 1)
-    result_df = validateOtherFields(df, result_df, other_fields)
 
     return result_df
 
@@ -145,6 +162,7 @@ def resetLogPath(_log_file_path, _GLOBAL_LOG_LEVEL = 0):
 
 def handleCSVFile(input_data_file, staging_table_name, companies_to_consider, log_level):
     input_df = pd.read_csv(f'data/{input_data_file}', keep_default_na=False, low_memory=False)
+    input_df = input_df.dropna(axis=1, how='all')
     entity_name = input_data_file[:-len('.csv')]
     rows = []
 

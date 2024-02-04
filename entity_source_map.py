@@ -43,9 +43,9 @@ def write_to_excel(field_table_map, output_path):
     rows = []
     for field_name in field_table_map:
         rows.append({
+            'Entity Field': field_name,
             'Source Table': field_table_map[field_name][0],
             'Source Field': field_table_map[field_name][1],
-            'Entity Field': field_name
         })
     pd.DataFrame(rows).to_excel(output_path, index=False)
 
