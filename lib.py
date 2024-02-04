@@ -1,20 +1,26 @@
 import os
+import pandas as pd
 import xml.etree.ElementTree as ET
 
 root_path = 'K:/AosService/PackagesLocalDirectory'
 
-def verifyStagingTable(axObject):
-    if axObject.endswith("Staging"):
-        return axObject
-    else:
-        print(f"Error: Provided input object: {axObject} is not of type staging table")
-        exit(-1)
+def getEntityInfo(name):
+    excel_file = 'label_conversion.csv'
+    try:
+        df = pd.read_csv(excel_file, header=None, names=['Data Entity', 'Staging Table', 'Target Entity'])
+        for col in df.columns:
+            row = df.loc[df[col] == name]
+            if not row.empty:
+                return row
 
-def verifyDataEntity(axObject):
-    if axObject.endswith("Entity"):
-        return axObject
-    else:
-        print(f"Error: Provided input object: {axObject} is not of type data entity")
+        print(f"Row with value {name} not found.")
+        raise ValueError(f'{name} does not exist as an entity in the database.')
+
+    except FileNotFoundError:
+        print(f"File not found: {excel_file}")
+        exit(-1)
+    except Exception as e:
+        print(f"An error occurred while trying to read label_conversion.csv: {e}")
         exit(-1)
 
 def identify_model(search_term):

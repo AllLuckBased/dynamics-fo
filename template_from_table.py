@@ -54,7 +54,6 @@ enum_from_docs = {
 }
 
 def generate_template(staging_table_name, force):
-    staging_table_name = verifyStagingTable(staging_table_name)
     ignored_index_fields = ['DefinitionGroup', 'ExecutionId', 'RecId']
     ignored_table_fields = ['DefinitionGroup', 'ExecutionId', 'IsSelected', 'TransferStatus']
 
@@ -189,42 +188,40 @@ def generate_template(staging_table_name, force):
         rows.append(row)
     return (rows, indexes)
 
-def merge_excel_files(input_excel, path_to_sample_data):
-    inputs = pd.read_excel(input_excel)
-    
+def merge_excel_files(entity_info_list, path_to_sample_data):
     if not os.path.exists('templates/merged/'):
         os.makedirs('templates/merged/')
-    for _, row in inputs.iterrows():
+    for entity_info in entity_info_list:
+        filename = entity_info['Data Entity'].astype(str).iloc[0]
         try:
-            with pd.ExcelWriter(f'templates/merged/{row['Data Entity']}.xlsx') as writer:
-                df1 = pd.read_excel(f'templates/{row['Staging Table']}.xlsx')
+            with pd.ExcelWriter(f'templates/merged/{filename}.xlsx') as writer:
+                df1 = pd.read_excel(f'templates/{filename}.xlsx')
                 df1.to_excel(writer, sheet_name='Template', index=False)
 
-                df2 = pd.read_excel(f'{path_to_sample_data}/{row['Data Entity']}.xlsx')
+                df2 = pd.read_excel(f'{path_to_sample_data}/{filename}.xlsx')
                 df2.to_excel(writer, sheet_name='Sample data', index=False)
         except:
-            print('Failed to merge for ' + row['Data Entity'])
+            print('Failed to merge for ' + entity_info['Data Entity'].astype(str).iloc[0])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('-e', '--excel', help='List of entity names in excel sheet')
     parser.add_argument('-m', '--merge', help='Pass the path to the sample data folder.')
-    parser.add_argument('-e', '--excel', help='Pass "" to generate excel template required in this program.')
     parser.add_argument('-f', '--force', action='store_true', help='Omits the fields which are throwing errors.')
-    args, strings = parser.parse_known_args()
-    
+    args, names = parser.parse_known_args()
+
+    if not os.path.exists('templates/'):
+        os.makedirs('templates/')
     if args.excel:
-        inputs = pd.read_excel(args.excel)
-        if not os.path.exists('templates/'):
-            os.makedirs('templates/')
-        for _, row in inputs.iterrows():
-            template_rows = generate_template(row['Staging Table'], args.force)[0]
-            pd.DataFrame(template_rows).to_excel(f'templates/{row['Staging Table']}.xlsx', index=False)
-        if args.merge:
-            merge_excel_files(args.excel, args.merge)
-    elif args.excel == '':
-        pd.DataFrame(columns=['Data Entity', 'Staging Table']).to_excel('entity_input.xlsx', index=False)
-    else:
-        for staging_table_name in strings:
-            template_rows = generate_template(staging_table_name, False)
-            pd.DataFrame(template_rows[0]).to_excel(f'{staging_table_name}.xlsx', index=False)
-    
+        inputs = pd.read_excel(args.excel, header=None)
+        names = inputs.iloc[:, 0].astype(str).tolist()
+        
+    for name in names:
+        try:
+            entityInfo = getEntityInfo(name)
+        except ValueError:
+            continue
+        template_rows = generate_template(entityInfo['Staging Table'].astype(str).iloc[0], False)
+        pd.DataFrame(template_rows[0]).to_excel(f'templates/{entityInfo['Data Entity'].astype(str).iloc[0]}.xlsx', index=False)
+    if args.merge:
+        merge_excel_files(names, args.merge)
