@@ -51,7 +51,7 @@ def initialDFTemplateParsing(df, template):
 
         if not found and is_mandatory:
             log(f'ERROR - Mandatory column "{d365_column_name}" was missing from the data!', 3)
-            raise ValueError(f'ERROR - Mandatory column "{d365_column_name}" was missing from the data!')
+            raise ValueError(f'"{d365_column_name}"')
         elif not found:
             log(f'WARN - "{d365_column_name}" was missing from the data but is not mandatory', 2)
     
@@ -72,8 +72,8 @@ mandatory_columns_violation = []
 def validateMandatoryFields(df, result_df, mandatory_columns, excel_to_d365_mapping, skip_violations):
     for d365_column_name in mandatory_columns:
         mandatory_column_name = excel_to_d365_mapping.inverse[d365_column_name]
-        result_df = result_df[(result_df[mandatory_column_name].str.len() > 0)]
-        error_df = df[(df[mandatory_column_name].str.len() == 0)]
+        result_df = result_df[(result_df[mandatory_column_name].notna())]
+        error_df = df[(df[mandatory_column_name].isna())]
         if error_df.shape[0] > 0:
             if not skip_violations:
                 mandatory_columns_violation.append((mandatory_column_name, error_df.index.tolist()))
@@ -84,7 +84,13 @@ def validateMandatoryFields(df, result_df, mandatory_columns, excel_to_d365_mapp
 index_violations = []
 def validateIndexIntegrity(df, result_df, indexes, excel_to_d365_mapping):
     for index in indexes:
-        data_columns_indices = list(excel_to_d365_mapping.inverse[x] for x in index)
+        data_columns_indices = []
+        for x in index:
+            try:
+                inverse_value = excel_to_d365_mapping.inverse[x]
+                data_columns_indices.append(inverse_value)
+            except KeyError:
+                 print(f"Inverse does not exist for {x}. Skipping...")
         if(len(data_columns_indices) == 0):
             continue
         result_df = result_df[~result_df.duplicated(subset=data_columns_indices, keep='first')]
@@ -120,13 +126,13 @@ enum_violations = []
 def validateEnumFields(df, result_df, enum_names_with_values, skip_violations):
     for enum_column_name, values in enum_names_with_values:
         if df[enum_column_name].dtype in (int, 'int64', 'int32', 'int16', 'int8'):
-            result_df = result_df[result_df[enum_column_name] < len(values)]
-            error_df = df[~df[enum_column_name] < len(values)]
+            result_df = result_df[(result_df[enum_column_name] < len(values)) | result_df[enum_column_name].isna()]
+            error_df = df[~(df[enum_column_name] < len(values)) & ~result_df[enum_column_name].isna()]
         else:
             df[enum_column_name] = df[enum_column_name].astype(str)
-            result_df[enum_column_name] = result_df[enum_column_name].astype(str)
-            result_df = result_df[result_df[enum_column_name].isin(values)]
-            error_df = df[~df[enum_column_name].isin(values)]
+            result_df.loc[:, enum_column_name] = result_df[enum_column_name].astype(str)
+            result_df = result_df[result_df[enum_column_name].isin(values) | result_df[enum_column_name].isna()]
+            error_df = df[~df[enum_column_name].isin(values) & ~result_df[enum_column_name].isna()]
         
         if error_df.shape[0] > 0:
             if not skip_violations:
@@ -136,7 +142,6 @@ def validateEnumFields(df, result_df, enum_names_with_values, skip_violations):
     return result_df
 
 def validate_data(df, staging_table_name, skipIndexCheck = False):
-    df.set_index(pd.Index(range(2, len(df) + 2)), inplace=True)
     template, indexes = generate_template(staging_table_name, True)
     
     try:
@@ -149,12 +154,12 @@ def validate_data(df, staging_table_name, skipIndexCheck = False):
     log('\nINFO - Checking whether dataset has all mandatory fields for every row...', 1)
     result_df = validateMandatoryFields(df, result_df, mandatory_columns, excel_to_d365_mapping, skipIndexCheck)
 
+    log('\nINFO - Checking whether dataset follows string size constraints...', 1)
+    result_df = validateStringFields(df, result_df, string_columns_with_size, skipIndexCheck)
+
     if not skipIndexCheck:
         log('\nINFO - Checking for index integrity...', 1)
         result_df = validateIndexIntegrity(df, result_df, indexes, excel_to_d365_mapping)
-
-    log('\nINFO - Checking whether dataset follows string size constraints...', 1)
-    result_df = validateStringFields(df, result_df, string_columns_with_size, skipIndexCheck)
 
     log('\nINFO - Checking whether dataset enum values columns contain permissible values...', 1)
     result_df = validateEnumFields(df, result_df, enum_names_with_values, skipIndexCheck)
@@ -174,41 +179,58 @@ def resetLogPath(_log_file_path, _GLOBAL_LOG_LEVEL = 0):
     mandatory_columns_violation = []
 
 def handleCSVFile(datapath, entity_info, companies_to_consider, log_level):
-    input_data_file = f'{entity_info['Data Entity'].astype(str).iloc[0]}.csv'
     staging_table_name = entity_info['Staging Table'].astype(str).iloc[0]
 
-    input_df = pd.read_csv(f'{datapath}/{input_data_file}', keep_default_na=False, low_memory=False)
+    entity_name = f'{entity_info['Data Entity'].astype(str).iloc[0]}'
+    fileBaseName = format_for_windows_filename(f'{entity_name}')
+    fileName = fileBaseName + '.csv'
+
+    input_df = pd.read_csv(f'{datapath}/{fileName}', keep_default_na=False, low_memory=False)
+    input_df.set_index(pd.Index(range(2, len(input_df) + 2)), inplace=True)
+    
+    input_df.replace('NULL', pd.NA)
     input_df = input_df.dropna(axis=1, how='all')
-    entity_name = input_data_file[:-len('.csv')]
+    
     rows = []
 
-    if not os.path.exists(f'output/{entity_name}/'):
-        os.makedirs(f'output/{entity_name}/')
+    if not os.path.exists(f'output/{fileBaseName}/'):
+        os.makedirs(f'output/{fileBaseName}/')
     try:
-        with pd.ExcelWriter(f'output/{entity_name}/{entity_name}.xlsx') as raw_writer:
-            with pd.ExcelWriter(f'output/{entity_name}/{entity_name}_validated.xlsx') as valid_writer:
-                input_df.to_excel(raw_writer, sheet_name=entity_name, index=False)
+        with pd.ExcelWriter(f'output/{fileBaseName}/{fileBaseName}.xlsx') as raw_writer:
+            with pd.ExcelWriter(f'output/{fileBaseName}/{fileBaseName}_validated.xlsx') as valid_writer:
+                input_df.to_excel(raw_writer, sheet_name=fileBaseName, index=False)
                 for column in input_df.columns:
                     if column.lower() == 'dataareaid':
+                        resetLogPath(f'output/{fileBaseName}/overall_report.txt', 2)
+                        try:
+                            validate_data(input_df, staging_table_name, True)
+                        except ValueError as e:
+                            print(f'{e} is mandatory but was absent from data!')
+                            rows.append({
+                                'Entity Name': entity_name,
+                                'dataareaid': '',
+                                'Missing Values': e,
+                                'Enum violations': '',
+                                'Index violations': '',
+                                'String size violations': '',
+                            })
+                            return
+                        
                         valid_legal_entities = []
                         invalid_legal_entities = []
-                        if not os.path.exists(f'output/{entity_name}/logs'):
-                            os.makedirs(f'output/{entity_name}/logs')
+                        if not os.path.exists(f'output/{fileBaseName}/logs'):
+                            os.makedirs(f'output/{fileBaseName}/logs')
                         grouped = input_df.groupby(column)
                         for category, group_df in grouped:
                             if category == '':
-                                resetLogPath(f'output/{entity_name}/overall_report.txt', 2)
+                                resetLogPath(f'output/{fileBaseName}/overall_report.txt', 2)
                                 log(f'ERROR: Empty values found under dataareaid for {entity_name}.', 3)
                                 continue
                             if companies_to_consider and category.lower() not in companies_to_consider:
                                 continue
                             group_df.to_excel(raw_writer, sheet_name=category, index=False)
-                            resetLogPath(f'output/{entity_name}/logs/{category}.txt', log_level)
-                            try:
-                                valid_data = validate_data(group_df, staging_table_name)
-                            except ValueError as e:
-                                print(e)
-                                continue
+                            resetLogPath(f'output/{fileBaseName}/logs/{category}.txt', log_level)
+                            valid_data = validate_data(group_df, staging_table_name)
                             if valid_data is not None:
                                 valid_data.to_excel(valid_writer, sheet_name=category, index=False)
                             if not failed_with_errors:
@@ -225,14 +247,12 @@ def handleCSVFile(datapath, entity_info, companies_to_consider, log_level):
                                 'String size violations': string_size_violations,
                             })
 
-                        resetLogPath(f'output/{entity_name}/overall_report.txt', 2)
+                        resetLogPath(f'output/{fileBaseName}/overall_report.txt', 2)
                         log(f'Following legal entity data was found valid:\n{valid_legal_entities}', 3)
                         log(f'Following legal entity data was found invalid:\n{invalid_legal_entities}', 3)
-                        
-                        validate_data(input_df, staging_table_name, True)
                         break
                 else:
-                    resetLogPath(f'output/{entity_name}/log.txt', log_level)
+                    resetLogPath(f'output/{fileBaseName}/log.txt', log_level)
                     try:
                         valid_data = validate_data(input_df, staging_table_name)
                         if valid_data is not None:
@@ -246,9 +266,17 @@ def handleCSVFile(datapath, entity_info, companies_to_consider, log_level):
                             'String size violations': string_size_violations,
                         })
                     except ValueError as e:
-                        print(e)
+                        print(f'{e} is mandatory but was absent from data!')
+                        rows.append({
+                            'Entity Name': entity_name,
+                            'dataareaid': '',
+                            'Missing Values': e,
+                            'Enum violations': '',
+                            'Index violations': '',
+                            'String size violations': '',
+                        })
     except Exception as e:
-        print(f'Failed to parse data from {input_data_file}\n{e}')
+        print(f'Failed to parse data from {fileName}\n')
     
     new_errors = pd.DataFrame(rows)
     overall_report_path = f'output/overall_report.xlsx'
@@ -269,8 +297,7 @@ if __name__ == '__main__':
             2 - Errors    
     ''')
     args, names = parser.parse_known_args()
-    args.datapath = 'data'
-    args.log_level = 2
+    
     names = [os.path.splitext(filename)[0] for filename in os.listdir(args.datapath) 
              if os.path.isfile(os.path.join(args.datapath, filename))]
     for name in names:

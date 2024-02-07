@@ -23,9 +23,11 @@ def get_all_data_sources(entity_name, no_blanks=False):
         computed_field = index.find('ComputedFieldMethod')
 
         if data_source is not None and data_field is not None:
-            if 'Entity' in data_source.text:
+            if 'Entity' in data_source.text and 'View' not in data_source.text:
                 inner_map = get_all_data_sources(data_source.text)
                 field_table_map[name_text] = inner_map[data_field.text]
+            elif 'View' in data_source.text:
+                field_table_map[name_text] = ['[Computed Field]', f'[{computed_field.text}]'] if no_blanks else ['', '']
             else:
                 field_table_map[name_text] = [data_source.text, data_field.text]
         elif computed_field is not None:
@@ -53,6 +55,7 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--excel', help='List of entity names in excel sheet')
     args, names = parser.parse_known_args()
 
+    args.excel = 'Finance.xlsx'
     if not os.path.exists('entity_maps/'):
         os.makedirs('entity_maps/')
     if args.excel:
@@ -64,5 +67,6 @@ if __name__ == '__main__':
             entityInfo = getEntityInfo(name)
         except ValueError:
             continue
+        fileName = format_for_windows_filename(entityInfo['Data Entity'].astype(str).iloc[0])
         write_to_excel(get_all_data_sources(entityInfo['Target Entity'].astype(str).iloc[0]), 
-                       f'entity_maps/{entityInfo['Data Entity'].astype(str).iloc[0]}.xlsx')
+                       f'entity_maps/{fileName}.xlsx')

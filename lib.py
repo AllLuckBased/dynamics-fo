@@ -1,8 +1,15 @@
+import re
 import os
 import pandas as pd
 import xml.etree.ElementTree as ET
 
 root_path = 'K:/AosService/PackagesLocalDirectory'
+
+def format_for_windows_filename(input_string):
+    forbidden_characters = r'<>:"/\|?*'
+    cleaned_string = re.sub(f'[{re.escape(forbidden_characters)}]', '_', input_string)
+    cleaned_string = cleaned_string.strip()
+    return cleaned_string
 
 def getEntityInfo(name):
     excel_file = 'label_conversion.csv'
@@ -31,8 +38,8 @@ def identify_model(search_term):
         if directory == 'ApplicationSuite':
             directory_path = f'{root_path}/{directory}/Foundation/{search_type}'
         if os.path.exists(directory_path):
-            files = [f for f in os.listdir(directory_path)]
-            if search_term+'.xml' in files:
+            files = [f.lower() for f in os.listdir(directory_path)]
+            if search_term.lower()+'.xml' in files:
                 return directory
             
 def get_references(model_name):

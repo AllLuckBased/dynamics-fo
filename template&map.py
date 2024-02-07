@@ -43,10 +43,18 @@ for name in names:
         entityInfo = getEntityInfo(name)
     except ValueError:
         continue
+
+    if not os.path.exists('templates/'):
+        os.makedirs('templates/')
+    if not os.path.exists('entity_maps/'):
+        os.makedirs('entity_maps/')
+
     template_rows = generate_template(entityInfo['Staging Table'].astype(str).iloc[0], False)
-    pd.DataFrame(template_rows[0]).to_excel(f'templates/{entityInfo['Data Entity'].astype(str).iloc[0]}.xlsx', index=False)
-    write_to_excel(get_all_data_sources(entityInfo['Target Entity'].astype(str).iloc[0]), f'entity_maps/{entityInfo['Data Entity'].astype(str).iloc[0]}.xlsx')
-    merge_template_with_map(entityInfo['Data Entity'].astype(str).iloc[0], args.merge)
+    fileName = format_for_windows_filename(entityInfo['Data Entity'].astype(str).iloc[0])
+    pd.DataFrame(template_rows[0]).to_excel(f'templates/{fileName}.xlsx', index=False)
+    
+    write_to_excel(get_all_data_sources(entityInfo['Target Entity'].astype(str).iloc[0]), f'entity_maps/{fileName}.xlsx')
+    merge_template_with_map(fileName, args.merge)
 
     try:
         shutil.rmtree('templates/')
