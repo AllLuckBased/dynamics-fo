@@ -10,6 +10,11 @@ from template_from_table import generate_template
 GLOBAL_LOG_LEVEL = 2
 log_file_path = 'log.txt'
 failed_with_errors = False
+entityNameWithoutSpace = ''
+
+def append_to_validation_sql(data):
+    with open('validation.sql', 'a') as file:
+        file.write(data + '\n')
 
 def log(message, logLevel):
     global GLOBAL_LOG_LEVEL, log_file_path, failed_with_errors
@@ -179,17 +184,24 @@ def resetLogPath(_log_file_path, _GLOBAL_LOG_LEVEL = 0):
     mandatory_columns_violation = []
 
 def handleCSVFile(datapath, entity_info, companies_to_consider, log_level):
+    global entityNameWithoutSpace
     staging_table_name = entity_info['Staging Table'].astype(str).iloc[0]
 
     entity_name = f'{entity_info['Data Entity'].astype(str).iloc[0]}'
     fileBaseName = format_for_windows_filename(f'{entity_name}')
+    entityNameWithoutSpace = fileBaseName.replace(' ', '_')
     fileName = fileBaseName + '.csv'
 
     input_df = pd.read_csv(f'{datapath}/{fileName}', keep_default_na=False, low_memory=False)
     input_df.set_index(pd.Index(range(2, len(input_df) + 2)), inplace=True)
     
-    input_df.replace('NULL', pd.NA)
-    input_df = input_df.dropna(axis=1, how='all')
+    input_df1 = input_df.copy()
+    input_df1.replace('', pd.NA, inplace=True)
+    input_df1.replace(0, pd.NA, inplace=True)
+    input_df1.replace('NULL', pd.NA, inplace=True)
+    empty_columns = input_df1.columns[input_df1.isna().all()]
+    input_df = input_df.drop(empty_columns, axis=1)
+    del input_df1
     
     rows = []
 
@@ -297,7 +309,7 @@ if __name__ == '__main__':
             2 - Errors    
     ''')
     args, names = parser.parse_known_args()
-    
+    args.datapath = 'data'
     names = [os.path.splitext(filename)[0] for filename in os.listdir(args.datapath) 
              if os.path.isfile(os.path.join(args.datapath, filename))]
     for name in names:
