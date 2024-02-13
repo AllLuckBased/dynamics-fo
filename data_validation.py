@@ -128,16 +128,20 @@ def validateStringFields(df, result_df, string_columns_with_size, skip_violation
     return result_df
 
 enum_violations = []
+call = 0
 def validateEnumFields(df, result_df, enum_names_with_values, skip_violations):
+    global call
+    call = call + 1
     for enum_column_name, values in enum_names_with_values:
         if df[enum_column_name].dtype in (int, 'int64', 'int32', 'int16', 'int8'):
             result_df = result_df[(result_df[enum_column_name] < len(values)) | result_df[enum_column_name].isna()]
-            error_df = df[~(df[enum_column_name] < len(values)) & ~result_df[enum_column_name].isna()]
+            error_df = df[~(df[enum_column_name] < len(values)) & ~df[enum_column_name].isna()]
         else:
+            values.append('')
             df[enum_column_name] = df[enum_column_name].astype(str)
             result_df.loc[:, enum_column_name] = result_df[enum_column_name].astype(str)
-            result_df = result_df[result_df[enum_column_name].isin(values) | result_df[enum_column_name].isna()]
-            error_df = df[~df[enum_column_name].isin(values) & ~result_df[enum_column_name].isna()]
+            result_df = result_df[result_df[enum_column_name].isin(values)]
+            error_df = df[~df[enum_column_name].isin(values)]
         
         if error_df.shape[0] > 0:
             if not skip_violations:
@@ -288,7 +292,7 @@ def handleCSVFile(datapath, entity_info, companies_to_consider, log_level):
                             'String size violations': '',
                         })
     except Exception as e:
-        print(f'Failed to parse data from {fileName}\n')
+        print(f'Failed to parse data from {fileName}\n{e}')
     
     new_errors = pd.DataFrame(rows)
     overall_report_path = f'output/overall_report.xlsx'
@@ -310,8 +314,13 @@ if __name__ == '__main__':
     ''')
     args, names = parser.parse_known_args()
     args.datapath = 'data'
-    names = [os.path.splitext(filename)[0] for filename in os.listdir(args.datapath) 
-             if os.path.isfile(os.path.join(args.datapath, filename))]
+    args.log_level = 2
+    names = []
+    for filename in os.listdir(args.datapath):
+        filepath = os.path.join(args.datapath, filename)
+        if os.path.isfile(filepath):
+            name = os.path.splitext(filename)[0]
+            names.append(name)
     for name in names:
         try:
             entityInfo = getEntityInfo(name)

@@ -55,7 +55,6 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--excel', help='List of entity names in excel sheet')
     args, names = parser.parse_known_args()
 
-    args.excel = 'Finance.xlsx'
     if not os.path.exists('entity_maps/'):
         os.makedirs('entity_maps/')
     if args.excel:
