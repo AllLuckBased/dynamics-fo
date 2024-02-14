@@ -5,6 +5,33 @@ import xml.etree.ElementTree as ET
 
 root_path = 'K:/AosService/PackagesLocalDirectory'
 
+def log(message, log_file_path):
+    with open(log_file_path, 'a', encoding='utf-8') as log_file:
+            log_file.write(message + '\n')
+
+def resetLogPath(_log_file_path, _GLOBAL_LOG_LEVEL = 0):
+    global log_file_path, failed_with_errors, GLOBAL_LOG_LEVEL
+    global enum_violations, string_size_violations, index_violations, mandatory_columns_violation
+    log_file_path = _log_file_path
+    failed_with_errors = False
+    if(_GLOBAL_LOG_LEVEL):
+        GLOBAL_LOG_LEVEL = int(_GLOBAL_LOG_LEVEL)
+    enum_violations = []
+    index_violations = []
+    string_size_violations = []
+    mandatory_columns_violation = []
+
+def list_files_recursive(directory):
+    file_list = []
+    main_directory = os.path.abspath(directory)
+    
+    for root, _, files in os.walk(directory):
+        relative_path = os.path.relpath(root, main_directory)
+        for file in files:
+            file_name, file_extension = os.path.splitext(file)
+            file_list.append((relative_path, file_name, file_extension))
+    return file_list
+
 def format_for_windows_filename(input_string):
     forbidden_characters = r'<>:"/\|?*'
     cleaned_string = re.sub(f'[{re.escape(forbidden_characters)}]', '_', input_string)
