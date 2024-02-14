@@ -54,7 +54,7 @@ enum_from_docs = {
     'Timezone': 'GMTMINUS1200INTERNATIONALDATELINEWEST, GMTMINUS1100COORDINATEDUNIVERSALTIME, GMTMINUS1100MIDWAYISLAND_SAMOA, GMTMINUS1000HAWAII, GMTMINUS0900ALASKA, GMTMINUS0800PACIFICTIME, GMTMINUS0800TIJUANA_BAJACALIFORNIA, GMTMINUS0700ARIZONA, GMTMINUS0700MOUNTAINTIME, GMTMINUS0700CHIHUAHUA_LAPAZ_MAZATLAN, GMTMINUS0600CENTRALAMERICA, GMTMINUS0600CENTRALTIME, GMTMINUS0600GUADALAJARA_MEXICOCITY, GMTMINUS0600SASKATCHEWAN, GMTMINUS0500BOGOTA_LIMA_QUITO_RIOBRANCO, GMTMINUS0500EASTERNTIME, GMTMINUS0500INDIANA, GMTMINUS0500CHETUMAL, GMTMINUS0400ASUNCION, GMTMINUS0400ATLANTICTIME, GMTMINUS0400LAPAZ, GMTMINUS0400MANAUS, GMTMINUS0300SANTIAGO, GMTMINUS0430CARACAS, GMTMINUS0330NEWFOUNDLAND, GMTMINUS0300_SALVADOR, GMTMINUS0300BRASILIA, GMTMINUS0300BUENOSAIRES, GMTMINUS0300BUENOSAIRES_GEORGETOWN, GMTMINUS0300GREENLAND, GMTMINUS0300MONTEVIDEO, GMTMINUS0200MIDATLANTIC, GMTMINUS0100AZORES, GMTMINUS0100CAPEVERDIS, GMT_CASABLANCA, GMT_CASABLANCA_MONTROVIA_REYKJAVIK, GMT_COORDINATEDUNIVERSALTIME, GMT_DUBLIN_EDINBURGH_LISBON_LONDON, GMT_PLUS0300KALININGRAD_MINSK, GMTPLUS0100_AMSTERDAM_BERLIN_BERN_ROME, GMTPLUS0100BELGRADE_BRATISLAVA_BUDAPEST, GMTPLUS0100BRUSSELS_COPENHAGEN_MADRID, GMTPLUS0100SARAJEVO_SKOPJE_WARSAW_ZAGREB, GMTPLUS0100TRIPOLI, GMTPLUS0100WESTCENTRALAFRICA, GMTPLUS0200_DAMASCUS, GMTPLUS0200AMMAN, GMTPLUS0200ATHENS_BUCHAREST_ISTANBUL, GMTPLUS0200BEIRUT, GMTPLUS0200MINSK, GMTPLUS0200CAIRO, GMTPLUS0200HARARE_PRETORIA, GMTPLUS0200HELSINKI_KYIV_RIGA_VILNIUS, GMTPLUS0300ISTANBUL, GMTPLUS0200JERUSALEM, GMTPLUS0200WINDHOEK, GMTPLUS0300BAGHDAD, GMTPLUS0300KUWAIT_RIYADH, GMTPLUS0300MOSCOW_STPETERSBURG_VOLGOGRAD, GMTPLUS0300NAIROBI, GMTPLUS0300TBILISI, GMTPLUS0330TEHRAN, GMTPLUS0400ABUDHABI_MUSCAT, GMTPLUS0400BAKU, GMTPLUS0400IZHEVSK_SAMARA, GMTPLUS0400CAUCASUSSTANDARDTIME, GMTPLUS0400PORTLOUIS, GMTPLUS0400YEREVAN, GMTPLUS0430KABUL, GMTPLUS0500EKATERINBURG, GMTPLUS0500ISLAMABAD_KARACHI, GMTPLUS0500ISLAMABAD_KARACHI_TASHKENT, GMTPLUS0530CHENNAI_KOLKATA_MUMBAI, GMTPLUS0530SRIJAYAWARDENEPURA, GMTPLUS0545KATHMANDU, GMTPLUS0600ALMATY_NOVOSIBIRSK, GMTPLUS0600ASTANA_DHAKA, GMTPLUS0600DHAKA, GMTPLUS0600MAGADAN, GMTPLUS0630_YANGON, GMTPLUS0700_BANGKOK_HANOI_JAKARTA, GMTPLUS0700KRASNOYARSK, GMTPLUS0800_ULAANBAATAR, GMTPLUS0800BEIJING_CHONGQING_HONGKONG, GMTPLUS0800IRKUTSK_ULAANBATAAR, GMTPLUS0800KUALALUMPUR_SINGAPORE, GMTPLUS0800PERTH, GMTPLUS0800TAIPEI, GMTPLUS0900OSAKA_SAPPORO_TOKYO, GMTPLUS0900SEOUL, GMTPLUS0900YAKUTSK, GMTPLUS0930ADELAIDE, GMTPLUS0930DARWIN, GMTPLUS1000BRISBANE, GMTPLUS1000CANBERRA_MELBOURNE_SYDNEY, GMTPLUS1000GUAM_PORTMORESBY, GMTPLUS1000HOBART, GMTPLUS1000VLADIVOSTOK, GMTPLUS1100CHOKURDAKH, GMTPLUS1100MAGADAN_SOLOMONIS, GMTPLUS1200ANADYR_PETRO_KAMCHATSKY, GMTPLUS1200AUCKLAND_WELLINGTON, GMTPLUS1200COORDINATEDUNIVERSALTIME, GMTPLUS1200FIJI_KAMCHATKA_MARSHALLIS, GMTPLUS1300NUKU_ALOFA'
 }
 
-def generate_template(staging_table_name, force, model_name=None):
+def generate_template(staging_table_name, force, get_dependencies = True):
     ignored_index_fields = ['DefinitionGroup', 'ExecutionId', 'RecId']
     ignored_table_fields = ['DefinitionGroup', 'ExecutionId', 'IsSelected', 'TransferStatus']
 
@@ -177,6 +177,31 @@ def generate_template(staging_table_name, force, model_name=None):
             enum_values = ''
 
         mandatory = field.find('Mandatory')
+        
+        relation = {}
+        if get_dependencies:
+            for relationXML in root.find('Relations').findall('AxTableRelation'):
+                relatedTable = relationXML.find('RelatedTable').text
+                
+                constraint = {}
+                relatedTableFilter = None
+                for constraintXML in relationXML.find('Constraints').findall('AxTableRelationConstraint'):
+                    constraintType = constraintXML.get('{http://www.w3.org/2001/XMLSchema-instance}type')\
+                        .replace('AxTableRelationConstraint', '').replace('TableRelationConstraint', '')
+                    if constraintType == 'Field':
+                        field = constraintXML.find('Field').text
+                        relatedField = constraintXML.find('RelatedField').text
+                        constraint[field] = [relatedTable, relatedField, relatedTableFilter]
+                    elif constraintType == 'RelatedFixed':
+                        filter = constraintXML.find('ValueStr').text
+                        relatedField = constraintXML.find('RelatedField').text
+                        relatedTableFilter = (relatedField, filter)
+                        for constraint in constraint.values():
+                            constraint[2] = relatedTableFilter
+                    else:
+                        print(constraintType)
+
+                relation[relatedTable] = constraint
 
         row = {
             'D365 Column Name': name,
@@ -189,7 +214,7 @@ def generate_template(staging_table_name, force, model_name=None):
         }
         
         rows.append(row)
-    return (rows, indexes)
+    return (rows, indexes, relation)
 
 def merge_excel_files(entity_info_list, path_to_sample_data):
     if not os.path.exists('templates/merged/'):
@@ -224,7 +249,7 @@ if __name__ == '__main__':
             entityInfo = getEntityInfo(name)
         except ValueError:
             continue
-        template_rows = generate_template(entityInfo['Staging Table'].astype(str).iloc[0], force = args.force)
+        template_rows = generate_template(entityInfo['Staging Table'].astype(str).iloc[0], force = args.force, get_dependencies = False)
         
         fileName = format_for_windows_filename(entityInfo['Data Entity'].astype(str).iloc[0])
         pd.DataFrame(template_rows[0]).to_excel(f'templates/{fileName}.xlsx', index=False)
