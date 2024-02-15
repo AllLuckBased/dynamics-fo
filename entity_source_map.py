@@ -1,8 +1,29 @@
 import argparse
-import pandas as pd
-import xml.etree.ElementTree as ET
 
-from lib import *
+from lib.lib import *
+
+def read_source_map(excel_path):
+    df = pd.read_excel(excel_path)
+    
+    field_table_map = {}
+    for _, row in df.iterrows():
+        field_name = row['Entity Field']
+        source_table = row['Source Table']
+        source_field = row['Source Field']
+        
+        field_table_map[field_name] = (source_table, source_field)
+    
+    return field_table_map
+
+def write_source_map(field_table_map, output_path):
+    rows = []
+    for field_name in field_table_map:
+        rows.append({
+            'Entity Field': field_name,
+            'Source Table': field_table_map[field_name][0],
+            'Source Field': field_table_map[field_name][1],
+        })
+    pd.DataFrame(rows).to_excel(output_path, index=False)
 
 def get_all_data_sources(entity_name, no_blanks=False):
     model_name = identify_model(entity_name)
@@ -40,22 +61,11 @@ def get_all_data_sources(entity_name, no_blanks=False):
 
     return field_table_map
 
-def write_to_excel(field_table_map, output_path):
-    rows = []
-    for field_name in field_table_map:
-        rows.append({
-            'Entity Field': field_name,
-            'Source Table': field_table_map[field_name][0],
-            'Source Field': field_table_map[field_name][1],
-        })
-    pd.DataFrame(rows).to_excel(output_path, index=False)
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-e', '--excel', help='List of entity names in excel sheet')
     args, names = parser.parse_known_args()
 
-    args.excel = 'Finance.xlsx'
     if not os.path.exists('entity_maps/'):
         os.makedirs('entity_maps/')
     if args.excel:
@@ -64,9 +74,9 @@ if __name__ == '__main__':
 
     for name in names:
         try:
-            entityInfo = getEntityInfo(name)
+            entity_info = getEntityInfo(name)
         except ValueError:
             continue
-        fileName = format_for_windows_filename(entityInfo['Data Entity'].astype(str).iloc[0])
-        write_to_excel(get_all_data_sources(entityInfo['Target Entity'].astype(str).iloc[0]), 
+        fileName = format_for_windows_filename(entity_info['Data Entity'].astype(str).iloc[0])
+        write_source_map(get_all_data_sources(entity_info['Target Entity'].astype(str).iloc[0]), 
                        f'entity_maps/{fileName}.xlsx')

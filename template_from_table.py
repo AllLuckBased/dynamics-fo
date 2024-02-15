@@ -3,7 +3,7 @@ import argparse
 import pandas as pd
 import xml.etree.ElementTree as ET
 
-from lib import *
+from lib.lib import *
 
 def get_required_paths(model_name):
     referenced_models = get_references(model_name)
@@ -178,7 +178,8 @@ def generate_template(staging_table_name, force, get_dependencies = True):
 
         mandatory = field.find('Mandatory')
         
-        relation = {}
+        # For every field containing a relation, it maps to an array of [relatedTable, relatedField, relatedTableFilter]
+        relations = {}
         if get_dependencies:
             for relationXML in root.find('Relations').findall('AxTableRelation'):
                 relatedTable = relationXML.find('RelatedTable').text
@@ -201,7 +202,7 @@ def generate_template(staging_table_name, force, get_dependencies = True):
                     else:
                         print(constraintType)
 
-                relation[relatedTable] = constraint
+                relations[relatedTable] = constraint
 
         row = {
             'D365 Column Name': name,
@@ -214,7 +215,7 @@ def generate_template(staging_table_name, force, get_dependencies = True):
         }
         
         rows.append(row)
-    return (rows, indexes, relation)
+    return (rows, indexes, relations)
 
 def merge_excel_files(entity_info_list, path_to_sample_data):
     if not os.path.exists('templates/merged/'):

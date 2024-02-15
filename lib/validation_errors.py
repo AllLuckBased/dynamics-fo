@@ -21,8 +21,17 @@ class MissingColumnError(ValidationErrors):
         self.entityName = entity_name
     
     def log(self):
-        return f"FATAL: Mandatory column '{self.columnName}' was missing from the data:\n" + \
+        return f"FATAL: Mandatory column '{self.columnName}' was missing from the data.\n" + \
                f"{f'Entity Name: {self.entity_name}\n' if self.entity_name else ''}"
+
+class NoValidDataError(ValidationErrors):
+    def __init__(self, entity_name=None):
+        super.__init__(3, 'Every row was invalidated!!')
+        self.entity_name = entity_name
+
+    def log(self):
+        return f"FATAL: No valid data row was found for importing into Dynamics.\n" +\
+            f"{f'Entity Name: {self.entity_name}\n' if self.entity_name else ''}"
 
 class MissingDataError(ValidationErrors):
     def __init__(self, columnName, rows, company=None, entity_name=None):
@@ -132,6 +141,48 @@ class EnumValueError(ValidationErrors):
     
     def log(self):
         return f"ERROR: Some values in {self.columnName} does not represent a valid position in the enum:\n" + \
+               f"Following values were rejected: {self.rejected_values}\n" + \
+               f"{f'Row Indices: {self.rows}\n' if self.rows else ''}" + \
+               f"{f'Legal Entity: {self.company}\n' if self.company else ''}" + \
+               f"{f'Entity: {self.entity_name}\n' if self.entity_name else ''}"
+
+class SourceEntityNotFound():
+    def __init__(self, columnName, relatedTable, relatedField, entity=None):
+        super().__init__(3, 'Could not find source data entity!!')
+        self.columnName = columnName
+        self.relatedTable = relatedTable
+        self.relatedField = relatedField
+        self.entity = entity
+    
+    def log(self):
+        return f"FATAL: Could not identify an entity which satisfies the relation on column {self.columnName}\n"+ \
+            f"The column was dependent on {self.relatedField} field of {self.relatedTable} table\n" + \
+            f"{f'Entity: {self.entity_name}\n' if self.entity_name else ''}"
+    
+class SourceEntityMissing():
+    def __init__(self, columnName, sourceEntity, entity_field, entity=None):
+        super().__init__(2, 'Entity identified but data was missing!')
+        self.columnName = columnName
+        self.sourceEntity = sourceEntity
+        self.entity_field = entity_field
+        self.entity = entity
+    
+    def log(self):
+        return f"ERROR: The data for entity {self.sourceEntity} was not yet been provided.\n" + \
+            f"Waiting to resolve dependency: {self.columnName} == {self.sourceEntity}.{self.entity_field}\n" + \
+            f"{f'Entity: {self.entity_name}\n' if self.entity_name else ''}"
+    
+class KeyViolation():
+    def __init__(self, columnName, rejected_values, rows, company=None, entity_name=None):
+        super().__init__(2, 'Column value not in related table!')
+        self.columnName = columnName
+        self.rejected_values = rejected_values
+        self.rows = rows
+        self.company = company
+        self.entity_name = entity_name
+
+    def log(self):
+        return f"ERROR: Some values in {self.columnName} does not refer to a :\n" + \
                f"Following values were rejected: {self.rejected_values}\n" + \
                f"{f'Row Indices: {self.rows}\n' if self.rows else ''}" + \
                f"{f'Legal Entity: {self.company}\n' if self.company else ''}" + \

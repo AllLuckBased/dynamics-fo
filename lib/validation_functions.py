@@ -1,6 +1,6 @@
+import os
 import pandas as pd
 from bidict import bidict
-
 from validation_errors import *
 
 def parseDataWithTemplate(df, template):
@@ -8,7 +8,7 @@ def parseDataWithTemplate(df, template):
     mandatory_columns = []
     enum_names_with_values = []
     string_columns_with_size = []
-    excel_to_d365_mapping = bidict({})
+    excel_to_d365_mapping = bidict()
     
     for row in template:
         found = False
@@ -41,6 +41,38 @@ def parseDataWithTemplate(df, template):
             raise ValueError(f'"{d365_column_name}"')
         
     return (excel_to_d365_mapping, mandatory_columns, string_columns_with_size, enum_names_with_values)
+
+def validate_dependencies(input_df, company, excelToTemplateColumnMapping, relations, all_entity_source_maps, logs):
+    def hot_fetch_data(sourceInfo, company=None):
+        for filename in os.listdir('cache/data/'):
+            if filename.startswith(sourceInfo[0] + "."):
+                df = pd.read_excel(f'cache/data/{filename}')
+                if company is None:
+                    return df[sourceInfo[1].upper()]
+                for column in input_df.columns:
+                    if column.lower() == 'dataareaid':
+                        return df[df[column] == company][sourceInfo[1].upper()]
+                else:
+                    return df[sourceInfo[1].upper()]
+
+        raise FileNotFoundError()
+
+    entity_dependencies = {}
+    
+    for column in [excelToTemplateColumnMapping[excel_column] for excel_column in input_df.columns.tolist()]:
+        if column in relations:
+            relation = relations[column][:2] #TODO: remove this slice and handle that fixed field relation... see below redundancy too
+            
+            try:
+                entity_dependencies[column] = hot_fetch_data(all_entity_source_maps.inv[tuple(relation)], company)
+            except FileNotFoundError:
+                logs.apend(SourceEntityMissing(column, entity_dependencies[column][0], entity_dependencies[column][1]))
+            except:
+                logs.append(SourceEntityNotFound(column, relation[0], relation[1]))
+
+            error_df = input_df[~input_df[column.upper()].isin(entity_dependencies[column])]
+            if error_df.shape[0] > 0:
+                logs.append(KeyViolation(column, error_df[column].unique().tolist(), ', '.join(map(str, error_df.index))))
 
 def validateMandatoryFields(df, result_df, mandatory_columns, excel_to_d365_mapping, logs):
     for d365_column_name in mandatory_columns:
@@ -148,5 +180,3 @@ def validateEnumFields(df, result_df, enum_names_with_values, excel_to_d365_mapp
                 logs.append(EnumValueError(excel_to_d365_mapping[enum_column_name], 
                     error_df[enum_column_name].unique().tolist(), ', '.join(map(str, error_df.index))))
     return result_df
-
-            

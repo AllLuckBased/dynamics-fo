@@ -1,14 +1,15 @@
-import os
 import argparse
-import pandas as pd
 from collections import defaultdict
 
-from lib import *
-from validation_functions import *
+from lib.lib import *
+from lib.validation_functions import *
+
+from entity_source_map import *
 from template_from_table import generate_template
 
-def validate_data(df, excel_to_d365_mapping, mandatory_columns, string_columns_with_size, 
-                  indexes, enum_names_with_values, logs):
+
+def validate_data(df, excel_to_d365_mapping, mandatory_columns, 
+                  string_columns_with_size, indexes, enum_names_with_values, logs):
     # Copy the df to be able to progressively filter it while validating all the errors.
     result_df = df.copy()
 
@@ -30,7 +31,7 @@ def validate_data(df, excel_to_d365_mapping, mandatory_columns, string_columns_w
 
     return result_df
 
-def validateDataframe(input_df, entity_info, companies_to_consider):
+def validateDataframe(input_df, template, indexes, relations, all_entity_source_maps):
     #Update DF index by 2, accounting for header & 0 based index
     input_df.set_index(pd.Index(range(2, len(input_df) + 2)), inplace=True)
     
@@ -43,13 +44,14 @@ def validateDataframe(input_df, entity_info, companies_to_consider):
     input_df = input_df.drop(empty_columns, axis=1)
     del input_df1
 
-    #This will return the filtered data after validation
-    validated_data = defaultdict(pd.DataFrame)
     # This will return details about errors generated while validation for this particular data.
-    logs = defaultdict(list)
-    
-    #Generate the template of the given entity
-    template, indexes = generate_template(entity_info['Staging Table'].astype(str).iloc[0], force=False)
+    logs = {'': []}
+    if input_df.shape[0] == 0:
+        logs[''].append(NoValidDataError())
+        return (input_df, logs)
+
+    #This will return the filtered data after validation
+    validated_data = {}
 
     # This will parse the template and generate a mapping between data columns and template columns.
     # Additionally also casts the string columns into str if not already so for out input_df.
@@ -60,6 +62,7 @@ def validateDataframe(input_df, entity_info, companies_to_consider):
     # Exception is raised if data is missing a mandatory column.
     except ValueError as e:
         logs[''].append(MissingColumnError(e))
+        return (input_df, logs)
 
     # Search the data for a column with a name like dataareaid.
     # If found, group validate the df based on it, if not then validate the entirety of the df at once.
@@ -67,34 +70,76 @@ def validateDataframe(input_df, entity_info, companies_to_consider):
         if column.lower() == 'dataareaid':
             grouped_df = input_df.groupby(column)
             for company, group_df in grouped_df:
+                logs[company] = []
                 if company == '':
                     logs[''].append(MissingDataError(column, ', '.join(map(str, grouped_df.index))))
                     continue
-                if companies_to_consider and company.lower() not in companies_to_consider:
-                    continue
+                validate_dependencies(group_df, company,
+                    excelToTemplateColumnMapping, relations, all_entity_source_maps, logs[company])
                 validated_data[company] = validate_data(
-                    group_df, excelToTemplateColumnMapping, mandatory_columns, 
+                    group_df, excelToTemplateColumnMapping, mandatory_columns,
                     string_columns_with_size, indexes, enum_names_with_values, logs[company])
+                if validated_data[company].shape[0] == 0:
+                    logs[company].append(NoValidDataError())
             break
     else:
+        validate_dependencies(input_df, None,
+                    excelToTemplateColumnMapping, relations, all_entity_source_maps, logs[''])
         validated_data[''] = validate_data(input_df, excelToTemplateColumnMapping, mandatory_columns, 
             string_columns_with_size, indexes, enum_names_with_values, logs[''])
+        
     return (validated_data, logs)
 
 if __name__ == '__main__':
-    #Parse the required arguments from command line.
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--datapath', help='Path to data directory')
-    parser.add_argument('-c', '--companies', nargs='+', help="Provide list of dataareaids to validate. Leave empty to validate all.")
+    parser.add_argument('-c', '--clean', action='store_true', help='Clears all cached data from previous runs.')
     args, names = parser.parse_known_args()
     
-    args.datapath = 'data'
-    names = list_files_recursive(args.datapath)
-    for (relative_path, file_name, file_extension) in names:
-        try:
-            entityInfo = getEntityInfo(file_name)
-        except ValueError:
-            continue
+    os.makedirs('cache', exist_ok=True)
+    if args.clean:
+        shutil.rmtree('cache')
+    elif args.datapath:
+        correctFolder(args.datapath, 'cache/data')
+    else:
+        args.datapath = 'cache/data'
+        if not os.path.exists(args.datapath):
+            print('Could not find any data to validate. Please specify -d command line argument with data directory path.')
+            exit(-1)
+
+    #TODO: Cache this too...
+    template, indexes, relations = \
+        generate_template(entity_info['Staging Table'].astype(str).iloc[0], force=False)
+
+    all_entity_source_maps = bidict()
+    if not os.path.exists('cache/all_entity_source_maps.xlsx'):
+        scoped_entities = pd.read_excel('cache/scope.xlsx', 
+            header=None, names=['Data Entity'])['Data Entity'].tolist()
+        
+        rows = []
+        for entity in scoped_entities:
+            for entity_field, source_map in get_all_data_sources(entity):
+                if source_map[0] != '' and source_map[1] != '':
+                    all_entity_source_maps[(entity, entity_field)] = source_map
+                    rows.append({
+                        'Entity Name': entity,
+                        'Entity Field': entity_field,
+                        'Source Table': source_map[0],
+                        'Source Field': source_map[1],
+                    })
+            
+    else:
+        df = pd.read_excel('cache/all_entity_source_maps.xlsx')
+        for _, row in df.iterrows():
+            entity = row['Entity Name']
+            field_name = row['Entity Field']
+            source_table = row['Source Table']
+            source_field = row['Source Field']
+            
+            all_entity_source_maps[(entity, field_name)] = (source_table, source_field)
+
+    for relative_path, file_name, file_extension in list_files_recursive(args.datapath):
+        entity_info = getEntityInfo(file_name)
         
         if file_extension == '.csv':
             input_df = pd.read_csv(f'{args.datapath}/{file_name}{file_extension}',
@@ -105,7 +150,7 @@ if __name__ == '__main__':
         else:
             continue
 
-        validated_data, logs = validateDataframe(input_df, entityInfo, args.companies)
+        validated_data, logs = validateDataframe(input_df, template, indexes, relations, all_entity_source_maps)
 
         base_path = f'output/{relative_path}/{file_name}'
         if not os.path.exists(f'{base_path}/logs'):
@@ -115,6 +160,16 @@ if __name__ == '__main__':
             for company, company_df in validated_data.items():
                 company_df.to_excel(writer, sheet_name = company if company != '' else file_name, index = False)
 
+        rows = []
         for company, errors in logs.items():
+            row = {
+                'Entity Name': entity_info['Data Entity'].astype(str).iloc[0],
+                'Company': company,
+                'Severity': 0
+            }
             for error in errors:
-                log(error.log(), f'{base_path}/logs/{company}.txt')
+                if error.severity > row['Severity']:
+                    row['Severity'] = error.severity
+                row[error.error] = error.log()
+            rows.append(row)
+        pd.DataFrame(rows).to_excel(f'output/overall_report.xlsx', index=False)
