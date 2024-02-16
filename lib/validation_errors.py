@@ -30,7 +30,7 @@ class MissingColumnError(ValidationErrors):
     def __init__(self, columnName, entity_name=None):
         super().__init__(3, 'Mandatory column absent from data!!')
         self.columnName = columnName
-        self.entityName = entity_name
+        self.entity_name = entity_name
     
     def shortLog(self):
         return f"Column: {self.columnName}"

@@ -72,7 +72,10 @@ def validateDataframe(input_df, template, indexes, relations, all_entity_source_
             for company, group_df in grouped_df:
                 logs[company] = []
                 if company == '':
-                    logs[''].append(MissingDataError(column, ', '.join(map(str, grouped_df.index))))
+                    try:
+                        logs[''].append(MissingDataError(column, ', '.join(map(str, grouped_df.index))))
+                    except AttributeError:
+                        print(f'{column} has missing values')
                     continue
                 validate_dependencies(group_df, company,
                     excelToTemplateColumnMapping, relations, all_entity_source_maps, logs[company])
@@ -154,6 +157,7 @@ if __name__ == '__main__':
                     = (source_table, source_field)
 
 
+    rows = []
     for relative_path, file_name, file_extension in list_files_recursive(args.datapath):
         entity_info = getEntityInfo(file_name)
         
@@ -180,7 +184,6 @@ if __name__ == '__main__':
             for company, company_df in validated_data.items():
                 company_df.to_excel(writer, sheet_name = company if company != '' else file_name, index = False)
         
-        rows = []
         error_types = {}
         valid_companies = []
         for company, errors in logs.items():
@@ -205,8 +208,10 @@ if __name__ == '__main__':
                 else:
                     error_types[error.error] = [company]
             rows.append(row)
-        pd.DataFrame(rows).to_excel(f'output/overall_report.xlsx', index=False)
-
         with open(f'{base_path}/overall_logs.txt', 'a') as file:
             for error, companies in error_types.items():
                 file.write(f'{error}\nFor DATAAREAID(s): {companies}\n\n')
+
+            file.write(f'Valid DATAAREAID(s) were: {valid_companies}\n\n')
+
+    pd.DataFrame(rows).to_excel(f'output/overall_report.xlsx', index=False)

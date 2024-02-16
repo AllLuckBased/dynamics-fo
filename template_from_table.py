@@ -196,11 +196,15 @@ def generate_template(staging_table_name, force, get_dependencies = True):
                         relatedField = constraintXML.find('RelatedField').text
                         constraint[field] = [relatedTable, relatedField, relatedTableFilter]
                     elif constraintType == 'RelatedFixed':
-                        filter = constraintXML.find('ValueStr').text
+                        filter = constraintXML.find('ValueStr')
+                        if filter is None:
+                            continue
+
+                        filter = filter.text
                         relatedField = constraintXML.find('RelatedField').text
                         relatedTableFilter = (relatedField, filter)
-                        for constraint in constraint.values():
-                            constraint[2] = relatedTableFilter
+                        for constraint_value in constraint.values():
+                            constraint_value[2] = relatedTableFilter
                     else:
                         print(constraintType)
 
