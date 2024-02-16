@@ -1,7 +1,9 @@
 import os
+import re
 import pandas as pd
 from bidict import bidict
-from validation_errors import *
+from collections import defaultdict
+from lib.validation_errors import *
 
 def parseDataWithTemplate(df, template):
     # Information required to collect:
@@ -56,23 +58,84 @@ def validate_dependencies(input_df, company, excelToTemplateColumnMapping, relat
                     return df[sourceInfo[1].upper()]
 
         raise FileNotFoundError()
+    def minimum_cover(*lists):
+        def most_common_element(combined_list):
+            counts = {}
+            for item in combined_list:
+                counts[item[0]] = counts.get(item[0], 0) + 1
+            max_count = max(counts.values())
+            return [key for key, count in counts.items() if count == max_count]
+        
+        if not lists or len(lists) == 0:
+            return []
+        
+        possibilities = []
+        if len(lists) == 1:
+            for x in lists[0]:
+                possibilities.append((x,))    
+        else:
+            combined_list = []
+            for index, my_list in enumerate(lists):
+                for value in my_list:
+                    combined_list.append((value, index))
+            for most_common in most_common_element(combined_list):
+                for possibility in minimum_cover(*[my_list for my_list in lists if most_common not in my_list]):
+                    possibilities.append((most_common,) + tuple(possibility))
+        return possibilities
 
-    entity_dependencies = {}
-    
-    for column in [excelToTemplateColumnMapping[excel_column] for excel_column in input_df.columns.tolist()]:
+    source_data = {}
+    source_entities = defaultdict(int)
+    choose_source_entity = {}
+    for excel_column in input_df.columns.tolist():
+        try:
+            column = excelToTemplateColumnMapping[excel_column] 
+        except:
+            continue
         if column in relations:
             relation = relations[column][:2] #TODO: remove this slice and handle that fixed field relation... see below redundancy too
             
             try:
-                entity_dependencies[column] = hot_fetch_data(all_entity_source_maps.inv[tuple(relation)], company)
+                entity_source_map = all_entity_source_maps.inv[tuple(relation)]
+                source_entities_column = list(entity_source_map[0])
+                if len(source_entities_column) == 1:
+                    source_entities[source_entities_column[0]]+=1
+                    source_data[column] = hot_fetch_data((entity_source_map[0][0], entity_source_map[1][0]), company)
+                else:
+                    choose_source_entity[column] = entity_source_map
             except FileNotFoundError:
-                logs.apend(SourceEntityMissing(column, entity_dependencies[column][0], entity_dependencies[column][1]))
+                logs.append(SourceEntityMissing(column, entity_source_map[0][0], entity_source_map[1][0]))
             except:
                 logs.append(SourceEntityNotFound(column, relation[0], relation[1]))
 
-            error_df = input_df[~input_df[column.upper()].isin(entity_dependencies[column])]
+    if len(choose_source_entity.values()) > 0:
+        possibility = minimum_cover([
+            [x for x in choose_source_entity.values()[i][0]] 
+            for i in range(0, len(choose_source_entity.values()))
+        ])
+
+        for key, _ in sorted(source_entities.items(), key=lambda item: item[1], reverse=True):
+            possibilitiesNew = [possibility for possibility in possibility if key in possibility]
+            if len(possibilitiesNew) != 0:
+                possibility = possibilitiesNew
+            if len(possibilitiesNew) == 1:
+                break
+        possibility = possibility[0]
+
+        for column in choose_source_entity.keys():
+            chosen_entity = (set(entity_source_map[0]) & set(possibility))[0]
+            entity_field = entity_source_map[1][entity_source_map[0].index(chosen_entity)]
+            source_data[column] = hot_fetch_data((chosen_entity, entity_field), company)
+
+    if len(source_data.values()) > 0:
+        for excel_column in input_df.columns.tolist():
+            try:
+                column = excelToTemplateColumnMapping[excel_column] 
+            except:
+                continue
+            error_df = input_df[~input_df[column.upper()].isin(source_data[column])]
             if error_df.shape[0] > 0:
                 logs.append(KeyViolation(column, error_df[column].unique().tolist(), ', '.join(map(str, error_df.index))))
+
 
 def validateMandatoryFields(df, result_df, mandatory_columns, excel_to_d365_mapping, logs):
     for d365_column_name in mandatory_columns:

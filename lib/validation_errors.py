@@ -14,24 +14,30 @@ class ValidationErrors:
         self.severity = severity
         self.error = error
 
+class NoValidDataError(ValidationErrors):
+    def __init__(self, entity_name=None):
+        super().__init__(3, 'Every row was invalidated!!')
+        self.entity_name = entity_name
+
+    def shortLog(self):
+        return f"True"
+
+    def log(self):
+        return f"FATAL: No valid data row was found for importing into Dynamics.\n" +\
+            f"{f'Entity Name: {self.entity_name}\n' if self.entity_name else ''}"
+    
 class MissingColumnError(ValidationErrors):
     def __init__(self, columnName, entity_name=None):
         super().__init__(3, 'Mandatory column absent from data!!')
         self.columnName = columnName
         self.entityName = entity_name
     
+    def shortLog(self):
+        return f"Column: {self.columnName}"
+
     def log(self):
         return f"FATAL: Mandatory column '{self.columnName}' was missing from the data.\n" + \
                f"{f'Entity Name: {self.entity_name}\n' if self.entity_name else ''}"
-
-class NoValidDataError(ValidationErrors):
-    def __init__(self, entity_name=None):
-        super.__init__(3, 'Every row was invalidated!!')
-        self.entity_name = entity_name
-
-    def log(self):
-        return f"FATAL: No valid data row was found for importing into Dynamics.\n" +\
-            f"{f'Entity Name: {self.entity_name}\n' if self.entity_name else ''}"
 
 class MissingDataError(ValidationErrors):
     def __init__(self, columnName, rows, company=None, entity_name=None):
@@ -40,6 +46,9 @@ class MissingDataError(ValidationErrors):
         self.rows = rows
         self.company = company
         self.entity_name = entity_name
+    
+    def shortLog(self):
+        return f"Column: {self.columnName}, Empty rows: {self.rows}"
     
     def log(self):
         return f"ERROR: Some rows were empty in '{self.columnName}' which is mandatory and cannot be empty:\n" + \
@@ -58,6 +67,9 @@ class DataLossError(ValidationErrors):
         self.company = company
         self.entity_name = entity_name
     
+    def shortLog(self):
+        return f"Column: {self.columnName}, Max: {self.size} Loss: {self.grouped_lost_values}"
+
     def log(self):
         return f"ERROR: Data loss when '{self.columnName}' was truncated to the max allowed size of: {self.size}:\n" + \
                f"{self.grouped_lost_values + [self.seen_truncated_value]} all get mapped to {self.seen_truncated_value}\n" + \
@@ -75,6 +87,9 @@ class StringSizeError(ValidationErrors):
         self.company = company
         self.entity_name = entity_name
 
+    def shortLog(self):
+        return f"Column: {self.columnName}, Max: {self.size} Truncated: {self.values}"
+
     def log(self):
         return f"WARN: Strings exceeded allowed size of {self.size} in '{self.columnName}':\n" + \
                f"Following values exceeded the allowed size: {self.values}\n" + \
@@ -91,6 +106,9 @@ class DuplicateRowsError(ValidationErrors):
         self.company = company
         self.entity_name = entity_name
     
+    def shortLog(self):
+        return f"Key: ({self.index_columns}), Duplicates: {self.rows}"
+
     def log(self):
         return f"WARN: Duplicate enties observed in unique index ({self.index_columns}).\n" + \
                f"Duplicated entry index value(s): {self.index}\n" + \
@@ -107,6 +125,9 @@ class DataConflictError(ValidationErrors):
         self.company = company
         self.entity_name = entity_name
     
+    def shortLog(self):
+        return f"Key: ({self.index_columns}), Conflicts: {self.rows}"
+
     def log(self):
         return f"ERROR: Conflicting values obeserved for duplicate entries in unique index ({self.index_columns}).\n" + \
                f"Conflicting entry index value(s): {self.index}\n" + \
@@ -122,6 +143,9 @@ class InvalidEnumPositionError(ValidationErrors):
         self.rows = rows
         self.company = company
         self.entity_name = entity_name
+    
+    def shortLog(self):
+        return f"Column: {self.columnName}, Rejected: {self.rejected_values}"
     
     def log(self):
         return f"ERROR: Some values in {self.columnName} does not represent a valid position in the enum:\n" + \
@@ -139,6 +163,9 @@ class EnumValueError(ValidationErrors):
         self.company = company
         self.entity_name = entity_name
     
+    def shortLog(self):
+        return f"Column: {self.columnName}, Rejected: {self.rejected_values}"
+
     def log(self):
         return f"ERROR: Some values in {self.columnName} does not represent a valid position in the enum:\n" + \
                f"Following values were rejected: {self.rejected_values}\n" + \
@@ -146,33 +173,39 @@ class EnumValueError(ValidationErrors):
                f"{f'Legal Entity: {self.company}\n' if self.company else ''}" + \
                f"{f'Entity: {self.entity_name}\n' if self.entity_name else ''}"
 
-class SourceEntityNotFound():
-    def __init__(self, columnName, relatedTable, relatedField, entity=None):
+class SourceEntityNotFound(ValidationErrors):
+    def __init__(self, columnName, relatedTable, relatedField, entity_name=None):
         super().__init__(3, 'Could not find source data entity!!')
         self.columnName = columnName
         self.relatedTable = relatedTable
         self.relatedField = relatedField
-        self.entity = entity
+        self.entity_name = entity_name
     
+    def shortLog(self):
+        return f"Unknown source in {self.columnName} == {self.relatedField}.{self.relatedTable}"
+
     def log(self):
         return f"FATAL: Could not identify an entity which satisfies the relation on column {self.columnName}\n"+ \
             f"The column was dependent on {self.relatedField} field of {self.relatedTable} table\n" + \
             f"{f'Entity: {self.entity_name}\n' if self.entity_name else ''}"
     
-class SourceEntityMissing():
-    def __init__(self, columnName, sourceEntity, entity_field, entity=None):
+class SourceEntityMissing(ValidationErrors):
+    def __init__(self, columnName, sourceEntity, entity_field, entity_name=None):
         super().__init__(2, 'Entity identified but data was missing!')
         self.columnName = columnName
         self.sourceEntity = sourceEntity
         self.entity_field = entity_field
-        self.entity = entity
+        self.entity_name = entity_name
     
+    def shortLog(self):
+        return f"{self.sourceEntity} was missing in {self.columnName} == {self.sourceEntity}.{self.entity_field}"
+
     def log(self):
         return f"ERROR: The data for entity {self.sourceEntity} was not yet been provided.\n" + \
             f"Waiting to resolve dependency: {self.columnName} == {self.sourceEntity}.{self.entity_field}\n" + \
             f"{f'Entity: {self.entity_name}\n' if self.entity_name else ''}"
     
-class KeyViolation():
+class KeyViolation(ValidationErrors):
     def __init__(self, columnName, rejected_values, rows, company=None, entity_name=None):
         super().__init__(2, 'Column value not in related table!')
         self.columnName = columnName
@@ -180,6 +213,9 @@ class KeyViolation():
         self.rows = rows
         self.company = company
         self.entity_name = entity_name
+
+    def shortLog(self):
+        return f"Column: {self.columnName}, Rejected: {self.rejected_values}"
 
     def log(self):
         return f"ERROR: Some values in {self.columnName} does not refer to a :\n" + \

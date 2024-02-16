@@ -1,5 +1,5 @@
 import argparse
-from collections import defaultdict
+from bidict import ValueDuplicationError
 
 from lib.lib import *
 from lib.validation_functions import *
@@ -34,12 +34,12 @@ def validate_data(df, excel_to_d365_mapping, mandatory_columns,
 def validateDataframe(input_df, template, indexes, relations, all_entity_source_maps):
     #Update DF index by 2, accounting for header & 0 based index
     input_df.set_index(pd.Index(range(2, len(input_df) + 2)), inplace=True)
-    
-    #Drops fully empty columns(NULL or 0s included) from the data.
+    input_df.replace('NULL', '', inplace=True)
+
+    #Drops fully empty columns(NULL or 0s included) from the data. TODO: Verify this...
     input_df1 = input_df.copy()
     input_df1.replace('', pd.NA, inplace=True)
     input_df1.replace(0, pd.NA, inplace=True)
-    input_df1.replace('NULL', pd.NA, inplace=True)
     empty_columns = input_df1.columns[input_df1.isna().all()]
     input_df = input_df.drop(empty_columns, axis=1)
     del input_df1
@@ -87,7 +87,8 @@ def validateDataframe(input_df, template, indexes, relations, all_entity_source_
                     excelToTemplateColumnMapping, relations, all_entity_source_maps, logs[''])
         validated_data[''] = validate_data(input_df, excelToTemplateColumnMapping, mandatory_columns, 
             string_columns_with_size, indexes, enum_names_with_values, logs[''])
-        
+    
+    if len(logs.keys()) > 1: logs.pop('')
     return (validated_data, logs)
 
 if __name__ == '__main__':
@@ -97,19 +98,19 @@ if __name__ == '__main__':
     args, names = parser.parse_known_args()
     
     os.makedirs('cache', exist_ok=True)
+    #args.datapath = 'data'
     if args.clean:
         shutil.rmtree('cache')
     elif args.datapath:
+        #shutil.rmtree('output/')
+        #shutil.rmtree('cache/data')
         correctFolder(args.datapath, 'cache/data')
     else:
+        #TODO: adds the new file to the cache from the data. Maybe it does it inside args.datapath only instead of doing current behaviour...
         args.datapath = 'cache/data'
         if not os.path.exists(args.datapath):
             print('Could not find any data to validate. Please specify -d command line argument with data directory path.')
             exit(-1)
-
-    #TODO: Cache this too...
-    template, indexes, relations = \
-        generate_template(entity_info['Staging Table'].astype(str).iloc[0], force=False)
 
     all_entity_source_maps = bidict()
     if not os.path.exists('cache/all_entity_source_maps.xlsx'):
@@ -118,28 +119,47 @@ if __name__ == '__main__':
         
         rows = []
         for entity in scoped_entities:
-            for entity_field, source_map in get_all_data_sources(entity):
+            entity_info = getEntityInfo(entity)
+            for entity_field, source_map in get_all_data_sources(
+                entity_info['Target Entity'].astype(str).iloc[0]).items():
                 if source_map[0] != '' and source_map[1] != '':
-                    all_entity_source_maps[(entity, entity_field)] = source_map
-                    rows.append({
-                        'Entity Name': entity,
-                        'Entity Field': entity_field,
-                        'Source Table': source_map[0],
-                        'Source Field': source_map[1],
-                    })
-            
+                    try:
+                        all_entity_source_maps[((entity), (entity_field))] = tuple(source_map)
+                        rows.append({
+                            'Entity Name': entity,
+                            'Entity Field': entity_field,
+                            'Source Table': source_map[0],
+                            'Source Field': source_map[1],
+                        })
+                    except ValueDuplicationError:
+                        prevKey = all_entity_source_maps.inv[tuple(source_map)]
+                        all_entity_source_maps.pop(prevKey)
+                        all_entity_source_maps[(prevKey[0] + (entity), (prevKey[1]) + (entity_field))]\
+                            = tuple(source_map)
+        pd.DataFrame(rows).to_excel('cache/all_entity_source_maps.xlsx', index=False)
     else:
         df = pd.read_excel('cache/all_entity_source_maps.xlsx')
         for _, row in df.iterrows():
             entity = row['Entity Name']
-            field_name = row['Entity Field']
+            entity_field = row['Entity Field']
             source_table = row['Source Table']
             source_field = row['Source Field']
             
-            all_entity_source_maps[(entity, field_name)] = (source_table, source_field)
+            try:
+                all_entity_source_maps[((entity,), (entity_field,))] = (source_table, source_field)
+            except ValueDuplicationError:
+                prevKey = all_entity_source_maps.inv[(source_table, source_field)]
+                all_entity_source_maps.pop(prevKey)
+                all_entity_source_maps[(prevKey[0] + (entity,), (prevKey[1]) + (entity_field,))]\
+                    = (source_table, source_field)
+
 
     for relative_path, file_name, file_extension in list_files_recursive(args.datapath):
         entity_info = getEntityInfo(file_name)
+        
+        #TODO: Cache this too...
+        template, indexes, relations = \
+            generate_template(entity_info['Staging Table'].astype(str).iloc[0], force=False)
         
         if file_extension == '.csv':
             input_df = pd.read_csv(f'{args.datapath}/{file_name}{file_extension}',
@@ -159,17 +179,34 @@ if __name__ == '__main__':
         with pd.ExcelWriter(f'{base_path}/{file_name}_validated.xlsx') as writer:
             for company, company_df in validated_data.items():
                 company_df.to_excel(writer, sheet_name = company if company != '' else file_name, index = False)
-
+        
         rows = []
+        error_types = {}
+        valid_companies = []
         for company, errors in logs.items():
             row = {
                 'Entity Name': entity_info['Data Entity'].astype(str).iloc[0],
                 'Company': company,
                 'Severity': 0
             }
+
+            if len(errors) == 0:
+                valid_companies.append(company)
             for error in errors:
                 if error.severity > row['Severity']:
                     row['Severity'] = error.severity
-                row[error.error] = error.log()
+                row[type(error).__name__] = error.shortLog()
+                
+                with open(f'{base_path}/logs/{company}.txt', 'a') as file:
+                    file.write(f'{error.log()}\n')
+                
+                if error.error in error_types:
+                    error_types[error.error].append(company)
+                else:
+                    error_types[error.error] = [company]
             rows.append(row)
         pd.DataFrame(rows).to_excel(f'output/overall_report.xlsx', index=False)
+
+        with open(f'{base_path}/overall_logs.txt', 'a') as file:
+            for error, companies in error_types.items():
+                file.write(f'{error}\nFor DATAAREAID(s): {companies}\n\n')

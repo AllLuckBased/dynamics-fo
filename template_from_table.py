@@ -58,8 +58,8 @@ def generate_template(staging_table_name, force, get_dependencies = True):
     ignored_index_fields = ['DefinitionGroup', 'ExecutionId', 'RecId']
     ignored_table_fields = ['DefinitionGroup', 'ExecutionId', 'IsSelected', 'TransferStatus']
 
-    if model_name is None:
-        model_name = identify_model(staging_table_name)
+
+    model_name = identify_model(staging_table_name)
     main_paths, edt_paths, enum_paths = get_required_paths(model_name)
 
     for main_path in main_paths:
@@ -182,8 +182,10 @@ def generate_template(staging_table_name, force, get_dependencies = True):
         relations = {}
         if get_dependencies:
             for relationXML in root.find('Relations').findall('AxTableRelation'):
+                relation_name = relationXML.find('Name').text
+                if relation_name.lower() == 'dataentity': continue
+
                 relatedTable = relationXML.find('RelatedTable').text
-                
                 constraint = {}
                 relatedTableFilter = None
                 for constraintXML in relationXML.find('Constraints').findall('AxTableRelationConstraint'):
@@ -202,7 +204,7 @@ def generate_template(staging_table_name, force, get_dependencies = True):
                     else:
                         print(constraintType)
 
-                relations[relatedTable] = constraint
+                relations.update(constraint)
 
         row = {
             'D365 Column Name': name,
