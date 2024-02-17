@@ -88,7 +88,7 @@ class StringSizeError(ValidationErrors):
         self.entity_name = entity_name
 
     def shortLog(self):
-        return f"Column: {self.columnName}, Max: {self.size} Truncated: {self.values}"
+        return f"Column: {self.columnName}, Max: {self.size}, Errors: {self.values}"
 
     def log(self):
         return f"WARN: Strings exceeded allowed size of {self.size} in '{self.columnName}':\n" + \
@@ -191,14 +191,14 @@ class SourceEntityNotFound(ValidationErrors):
     
 class SourceEntityMissing(ValidationErrors):
     def __init__(self, columnName, sourceEntity, entity_field, entity_name=None):
-        super().__init__(2, 'Entity identified but data was missing!')
+        super().__init__(2, 'Source entity identified but data was missing!')
         self.columnName = columnName
         self.sourceEntity = sourceEntity
         self.entity_field = entity_field
         self.entity_name = entity_name
     
     def shortLog(self):
-        return f"{self.sourceEntity} was missing in {self.columnName} == {self.sourceEntity}.{self.entity_field}"
+        return f"Matching {self.entity_field} was missing from {self.sourceEntity}"
 
     def log(self):
         return f"ERROR: The data for entity {self.sourceEntity} was not yet been provided.\n" + \

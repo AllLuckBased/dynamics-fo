@@ -24,21 +24,21 @@ def find_closest_strings(target_string, string_list, num_results=1):
     sorted_distances = sorted(distances, key=lambda x: x[1])[:num_results]
     return sorted_distances
 
-def getEntityInfo(name):
+def getEntityInfo(name, interact = True):
     excel_file = 'res/label_conversion.csv'
     try:
         df = pd.read_csv(excel_file, skiprows=1, header=None, 
                          names=['Data Entity', 'Staging Table', 'Target Entity'])
-        
         closest_match = None
         for col in df.columns:
             row = df.loc[df[col] == name]
-            if row.empty:
+            if row.empty and interact:
                 new_closest_match = find_closest_strings(name, df[col].tolist())
                 if closest_match is None or new_closest_match[0][1] < closest_match[0][1]:
                     closest_match = new_closest_match
-            else:
+            elif not row.empty:
                 return row
+        if not interact: return None
         if(closest_match[0][1] <= 3):
             return getEntityInfo(closest_match[0][0])
         else:

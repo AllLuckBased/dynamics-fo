@@ -1,12 +1,16 @@
+import warnings
 import argparse
 from bidict import ValueDuplicationError
 
-from lib.lib import *
+from lib.common import *
 from lib.validation_functions import *
+from lib.dependency_validation import validate_dependencies
 
 from entity_source_map import *
 from template_from_table import generate_template
 
+# Suppress the specific warning from openpyxl
+warnings.simplefilter("ignore", UserWarning)
 
 def validate_data(df, excel_to_d365_mapping, mandatory_columns, 
                   string_columns_with_size, indexes, enum_names_with_values, logs):
@@ -27,11 +31,11 @@ def validate_data(df, excel_to_d365_mapping, mandatory_columns,
 
     # Validate the values are either numbers indicating a valid position in the enum, or backend value.
     # result_df will be generated after dropping all rows with invalid enum position or backend value.
-    result_df = validateEnumFields(df, result_df, enum_names_with_values, excel_to_d365_mapping, logs)
+    #result_df = validateEnumFields(df, result_df, enum_names_with_values, excel_to_d365_mapping, logs)
 
     return result_df
 
-def validateDataframe(input_df, template, indexes, relations, all_entity_source_maps):
+def validateDataframe(input_df, template, indexes, stagingRelations, entityRelations, all_entity_source_maps):
     #Update DF index by 2, accounting for header & 0 based index
     input_df.set_index(pd.Index(range(2, len(input_df) + 2)), inplace=True)
     input_df.replace('NULL', '', inplace=True)
@@ -48,7 +52,7 @@ def validateDataframe(input_df, template, indexes, relations, all_entity_source_
     logs = {'': []}
     if input_df.shape[0] == 0:
         logs[''].append(NoValidDataError())
-        return (input_df, logs)
+        return (input_df, {}, logs)
 
     #This will return the filtered data after validation
     validated_data = {}
@@ -62,23 +66,21 @@ def validateDataframe(input_df, template, indexes, relations, all_entity_source_
     # Exception is raised if data is missing a mandatory column.
     except ValueError as e:
         logs[''].append(MissingColumnError(e))
-        return (input_df, logs)
+        return (input_df, {}, logs)
 
     # Search the data for a column with a name like dataareaid.
     # If found, group validate the df based on it, if not then validate the entirety of the df at once.
+    entity_dependencies = {}
     for column in input_df.columns:
         if column.lower() == 'dataareaid':
             grouped_df = input_df.groupby(column)
             for company, group_df in grouped_df:
                 logs[company] = []
                 if company == '':
-                    try:
-                        logs[''].append(MissingDataError(column, ', '.join(map(str, grouped_df.index))))
-                    except AttributeError:
-                        print(f'{column} has missing values')
+                    logs[''].append(MissingDataError(column, ', '.join(map(str, group_df.index))))
                     continue
-                validate_dependencies(group_df, company,
-                    excelToTemplateColumnMapping, relations, all_entity_source_maps, logs[company])
+                entity_dependencies.update(validate_dependencies(group_df, company, excelToTemplateColumnMapping,
+                    stagingRelations, entityRelations, all_entity_source_maps, logs[company]))
                 validated_data[company] = validate_data(
                     group_df, excelToTemplateColumnMapping, mandatory_columns,
                     string_columns_with_size, indexes, enum_names_with_values, logs[company])
@@ -86,13 +88,29 @@ def validateDataframe(input_df, template, indexes, relations, all_entity_source_
                     logs[company].append(NoValidDataError())
             break
     else:
-        validate_dependencies(input_df, None,
-                    excelToTemplateColumnMapping, relations, all_entity_source_maps, logs[''])
+        entity_dependencies.update(validate_dependencies(input_df, None,
+                    excelToTemplateColumnMapping, stagingRelations, entityRelations, all_entity_source_maps, logs['']))
         validated_data[''] = validate_data(input_df, excelToTemplateColumnMapping, mandatory_columns, 
             string_columns_with_size, indexes, enum_names_with_values, logs[''])
     
-    if len(logs.keys()) > 1: logs.pop('')
-    return (validated_data, logs)
+    if len(logs.keys()) > 1 and '' in logs: logs.pop('')
+    return (validated_data, entity_dependencies, logs)
+
+#TODO: Make tree
+class DependencyTreeNode:
+    def __init__(self, name, dependencies):
+        self.name = name
+        self.dependencies = dependencies
+
+    def get_execution_level(self):
+        if len(self.dependencies) == 0:
+            return 1
+        else:
+            max = 1
+            for dependency in self.dependencies:
+                if dependency.get_execution_level() > max:
+                    max = dependency.execution_level
+            return max
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -123,8 +141,9 @@ if __name__ == '__main__':
         rows = []
         for entity in scoped_entities:
             entity_info = getEntityInfo(entity)
-            for entity_field, source_map in get_all_data_sources(
-                entity_info['Target Entity'].astype(str).iloc[0]).items():
+            table_sources = get_all_data_sources(
+                entity_info['Target Entity'].astype(str).iloc[0], get_dependencies=False)
+            for entity_field, source_map in table_sources.items():
                 if source_map[0] != '' and source_map[1] != '':
                     try:
                         all_entity_source_maps[((entity), (entity_field))] = tuple(source_map)
@@ -141,6 +160,7 @@ if __name__ == '__main__':
                             = tuple(source_map)
         pd.DataFrame(rows).to_excel('cache/all_entity_source_maps.xlsx', index=False)
     else:
+        #TODO: cache relations
         df = pd.read_excel('cache/all_entity_source_maps.xlsx')
         for _, row in df.iterrows():
             entity = row['Entity Name']
@@ -158,13 +178,15 @@ if __name__ == '__main__':
 
 
     rows = []
+    dependency_rows = []
     for relative_path, file_name, file_extension in list_files_recursive(args.datapath):
         entity_info = getEntityInfo(file_name)
         
         #TODO: Cache this too...
-        template, indexes, relations = \
+        template, indexes, stagingRelations = \
             generate_template(entity_info['Staging Table'].astype(str).iloc[0], force=False)
-        
+        entityRelations = get_entity_relations(entity_info['Target Entity'].astype(str).iloc[0])
+
         if file_extension == '.csv':
             input_df = pd.read_csv(f'{args.datapath}/{file_name}{file_extension}',
                 keep_default_na=False, low_memory=False)
@@ -173,8 +195,9 @@ if __name__ == '__main__':
                 keep_default_na=False, low_memory=False)
         else:
             continue
-
-        validated_data, logs = validateDataframe(input_df, template, indexes, relations, all_entity_source_maps)
+    
+        validated_data, entity_dependencies, logs = \
+            validateDataframe(input_df, template, indexes, stagingRelations, entityRelations, all_entity_source_maps)
 
         base_path = f'output/{relative_path}/{file_name}'
         if not os.path.exists(f'{base_path}/logs'):
@@ -184,6 +207,16 @@ if __name__ == '__main__':
             for company, company_df in validated_data.items():
                 company_df.to_excel(writer, sheet_name = company if company != '' else file_name, index = False)
         
+        for column, dependency in entity_dependencies.items():
+            dependency_rows.append({
+                "Entity Name": file_name,
+                "Entity Column": column,
+                "Related Entity": dependency[0][0],
+                "Related Column": dependency[1][0],
+                "Fixed Constraint": dependency[3],
+                "Optional": dependency[2],
+            })
+
         error_types = {}
         valid_companies = []
         for company, errors in logs.items():
@@ -204,14 +237,15 @@ if __name__ == '__main__':
                     file.write(f'{error.log()}\n')
                 
                 if error.error in error_types:
-                    error_types[error.error].append(company)
+                    error_types[error.error].add(company)
                 else:
-                    error_types[error.error] = [company]
+                    error_types[error.error] = set([company])
             rows.append(row)
         with open(f'{base_path}/overall_logs.txt', 'a') as file:
             for error, companies in error_types.items():
                 file.write(f'{error}\nFor DATAAREAID(s): {companies}\n\n')
 
-            file.write(f'Valid DATAAREAID(s) were: {valid_companies}\n\n')
+            file.write(f'Valid DATAAREAID(s) were:\n {valid_companies}\n\n')
 
     pd.DataFrame(rows).to_excel(f'output/overall_report.xlsx', index=False)
+    pd.DataFrame(dependency_rows).to_excel(f'output/dependencies.xlsx', index=False)

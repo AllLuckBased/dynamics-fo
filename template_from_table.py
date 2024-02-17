@@ -3,7 +3,7 @@ import argparse
 import pandas as pd
 import xml.etree.ElementTree as ET
 
-from lib.lib import *
+from lib.common import *
 
 def get_required_paths(model_name):
     referenced_models = get_references(model_name)
@@ -185,6 +185,11 @@ def generate_template(staging_table_name, force, get_dependencies = True):
                 relation_name = relationXML.find('Name').text
                 if relation_name.lower() == 'dataentity': continue
 
+                optional = True
+                if relationXML.find('RelatedTableCardinality') is not None\
+                    and relationXML.find('RelatedTableCardinality').text == 'ExactlyOne':
+                    optional = False
+
                 relatedTable = relationXML.find('RelatedTable').text
                 constraint = {}
                 relatedTableFilter = None
@@ -194,20 +199,16 @@ def generate_template(staging_table_name, force, get_dependencies = True):
                     if constraintType == 'Field':
                         field = constraintXML.find('Field').text
                         relatedField = constraintXML.find('RelatedField').text
-                        constraint[field] = [relatedTable, relatedField, relatedTableFilter]
-                    elif constraintType == 'RelatedFixed':
-                        filter = constraintXML.find('ValueStr')
-                        if filter is None:
-                            continue
-
-                        filter = filter.text
-                        relatedField = constraintXML.find('RelatedField').text
-                        relatedTableFilter = (relatedField, filter)
-                        for constraint_value in constraint.values():
-                            constraint_value[2] = relatedTableFilter
+                        constraint[field] = [relatedTable, relatedField, optional, relatedTableFilter]
                     else:
-                        print(constraintType)
-
+                        filter = constraintXML.find('ValueStr')
+                        if filter is None: continue
+                        filter = filter.text
+                        relatedField = constraintXML.find(
+                            'RelatedField' if constraintType == 'RelatedFixed' else 'Field').text
+                        relatedEntityFilter = (relatedField, f'{constraintType}::{filter}')
+                        for constraint_value in constraint.values():
+                            constraint_value[3] = relatedEntityFilter
                 relations.update(constraint)
 
         row = {
