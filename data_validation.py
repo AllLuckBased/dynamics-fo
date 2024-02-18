@@ -3,6 +3,7 @@ import argparse
 from bidict import ValueDuplicationError
 
 from lib.common import *
+from lib.prepare_sql import *
 from lib.validation_functions import *
 from lib.dependency_validation import validate_dependencies
 
@@ -35,7 +36,7 @@ def validate_data(df, excel_to_d365_mapping, mandatory_columns,
 
     return result_df
 
-def validateDataframe(input_df, template, indexes, stagingRelations, entityRelations, all_entity_source_maps):
+def validateDataframe(input_df, template, indexes, stagingRelations, entityRelations, all_entity_source_maps, filename):
     #Update DF index by 2, accounting for header & 0 based index
     input_df.set_index(pd.Index(range(2, len(input_df) + 2)), inplace=True)
     input_df.replace('NULL', '', inplace=True)
@@ -50,12 +51,14 @@ def validateDataframe(input_df, template, indexes, stagingRelations, entityRelat
 
     # This will return details about errors generated while validation for this particular data.
     logs = {'': []}
-    if input_df.shape[0] == 0:
-        logs[''].append(NoValidDataError())
-        return (input_df, {}, logs)
-
     #This will return the filtered data after validation
     validated_data = {}
+    #Stores the sql validation script commands in the order: Null check, String length check, Enum value check.
+    sqls = ['', '', '']
+
+    if input_df.shape[0] == 0:
+        logs[''].append(NoValidDataError())
+        return (input_df, validated_data, logs, sqls)
 
     # This will parse the template and generate a mapping between data columns and template columns.
     # Additionally also casts the string columns into str if not already so for out input_df.
@@ -63,10 +66,16 @@ def validateDataframe(input_df, template, indexes, stagingRelations, entityRelat
     try:
         excelToTemplateColumnMapping, mandatory_columns, string_columns_with_size, enum_names_with_values = \
             parseDataWithTemplate(input_df, template)
+        for mand_column in mandatory_columns:
+            sqls[0] += not_null_sql(filename, mand_column)
+        for string_column_with_size in string_columns_with_size:
+            sqls[1] += string_size_sql(filename, string_column_with_size[0], string_column_with_size[1])
+        for enum_column_with_values in enum_names_with_values:
+            sqls[2] += enum_values_sql(filename, enum_column_with_values[0])
     # Exception is raised if data is missing a mandatory column.
     except ValueError as e:
         logs[''].append(MissingColumnError(e))
-        return (input_df, {}, logs)
+        return (input_df, validated_data, logs, sqls)
 
     # Search the data for a column with a name like dataareaid.
     # If found, group validate the df based on it, if not then validate the entirety of the df at once.
@@ -94,7 +103,7 @@ def validateDataframe(input_df, template, indexes, stagingRelations, entityRelat
             string_columns_with_size, indexes, enum_names_with_values, logs[''])
     
     if len(logs.keys()) > 1 and '' in logs: logs.pop('')
-    return (validated_data, entity_dependencies, logs)
+    return (validated_data, entity_dependencies, logs, sqls)
 
 #TODO: Make tree
 class DependencyTreeNode:
@@ -196,16 +205,40 @@ if __name__ == '__main__':
         else:
             continue
     
-        validated_data, entity_dependencies, logs = \
-            validateDataframe(input_df, template, indexes, stagingRelations, entityRelations, all_entity_source_maps)
+        validated_data, entity_dependencies, logs, sqls = \
+            validateDataframe(input_df, template, indexes, stagingRelations, entityRelations, all_entity_source_maps, file_name)
 
-        base_path = f'output/{relative_path}/{file_name}'
+        base_path = f'output/python/{relative_path}/{file_name}'
+        sql_base_path = f'output/sql/{file_name}'
         if not os.path.exists(f'{base_path}/logs'):
             os.makedirs(f'{base_path}/logs')
+        if not os.path.exists(f'{sql_base_path}'):
+            os.makedirs(f'{sql_base_path}')
         
         with pd.ExcelWriter(f'{base_path}/{file_name}_validated.xlsx') as writer:
             for company, company_df in validated_data.items():
                 company_df.to_excel(writer, sheet_name = company if company != '' else file_name, index = False)
+        
+        #making the sql validation files...
+        if sqls[0] != '': 
+            with open(f'{sql_base_path}/mandatory.sql', 'w') as file:
+                file.write(sqls[0])
+        if sqls[1] != '': 
+            with open(f'{sql_base_path}/string_length.sql', 'w') as file:
+                file.write(sqls[1])
+        if sqls[2] != '': 
+            with open(f'{sql_base_path}/enums.sql', 'w') as file:
+                file.write(sqls[2])
+        index_sql = ''
+        for index in indexes:
+            index_sql += duplicate_sql(file_name, index)
+            if index_sql != '':
+                with open(f'{sql_base_path}/index.sql', 'w') as file:
+                    file.write(index_sql)
+        dependency_sql_output = dependency_sql(file_name, entity_dependencies)
+        if dependency_sql_output != '':
+            with open(f'{sql_base_path}/dependency.sql', 'w') as file:
+                file.write(dependency_sql_output)
         
         for column, dependency in entity_dependencies.items():
             dependency_rows.append({
