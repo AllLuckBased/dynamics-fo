@@ -62,9 +62,9 @@ def getEntityInfo(name, interact = True):
 
 def correctExcel(excel_file_path, output_file_path):
     try:
-        df = pd.read_excel(excel_file_path, header=None)\
+        df = pd.read_excel(excel_file_path, header=None, names=['Data Entity'])\
             if os.path.splitext(excel_file_path)[1] == '.xlsx'\
-            else pd.read_csv(excel_file_path, header=None)
+            else pd.read_csv(excel_file_path, header=None, names=['Data Entity'])
     except:
         raise FileNotFoundError()
 
@@ -75,7 +75,9 @@ def correctExcel(excel_file_path, output_file_path):
         else:
             df = df.drop(index, axis=0)
     df.to_excel(f'{output_file_path}', index=False, header=False)
+    return df
 
+#TODO: copy the files to cache, dont move files...
 def correctFolder(datapath, output_datapath, scope_path='res/scope.xlsx'):
     def rename_file(old_filename, new_filename, relative_path):
         old_path = os.path.join(f'{datapath}/{relative_path}', old_filename)
@@ -84,7 +86,7 @@ def correctFolder(datapath, output_datapath, scope_path='res/scope.xlsx'):
         new_path = os.path.join(f'{output_datapath}/{relative_path}', new_filename)
         os.makedirs(f'{output_datapath}/{relative_path}', exist_ok=True)
 
-        duplicated_files = os.path.join(output_datapath, 'duplicates')
+        duplicated_files = os.path.join(datapath, 'duplicates')
         #If the filenames are the same when converted to lowercase, then its just a capitalization issue
         if old_filename.lower() != new_filename.lower() and os.path.exists(old_path_renamed):
             os.makedirs(duplicated_files, exist_ok=True)
@@ -97,7 +99,7 @@ def correctFolder(datapath, output_datapath, scope_path='res/scope.xlsx'):
         os.rename(old_path, new_path)
 
     scope_df = None
-    unmatched_files = os.path.join(output_datapath, 'unmatched')
+    unmatched_files = os.path.join(datapath, 'unmatched')
 
     try:
         scope_df = correctExcel(scope_path, f'cache/{os.path.basename(scope_path)}')
@@ -110,14 +112,15 @@ def correctFolder(datapath, output_datapath, scope_path='res/scope.xlsx'):
         if scope_df is not None:
             closest_in_scope = find_closest_strings(
                 correct_name, scope_df['Data Entity'].tolist(), num_results=1)
-            if(closest_in_scope[0][1] <= 5):
+            if(closest_in_scope[0][1] == 0):
                 correct_name = closest_in_scope[0][0]
             else:
-                input = input(f'{name} was not found. Replace with "{closest_match[0][0]}"?(Y/n) ')
-                if not input.capitalize().startswith('Y'):
+                user_input = input(f'{correct_name} was not found. Replace with "{closest_in_scope[0][0]}"?(Y/n) ')
+                if user_input.capitalize().startswith('N'):
                     os.makedirs(unmatched_files, exist_ok=True)
                     old_path = os.path.join(f'{datapath}/{relative_path}', file_name + '.csv')
                     shutil.move(old_path, os.path.join(unmatched_files, file_name + '.csv'))
+                    continue
                 else:
                     correct_name = closest_in_scope[0][0]
         rename_file(f'{file_name}{extension}', f'{correct_name}{extension}', relative_path)

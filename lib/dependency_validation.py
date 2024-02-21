@@ -11,8 +11,8 @@ def hot_fetch_data(fetchWhat, optional, company=None):
     for filename in os.listdir('cache/data/'):
         if filename.startswith(fetchWhat[0] + "."):
             if filename.endswith(".csv"):
-                df = pd.read_csv(f'cache/data/{filename}', low_memory=False)
-            else: df = pd.read_excel(f'cache/data/{filename}')
+                df = pd.read_csv(f'cache/data/{filename}', encoding_errors='replace', on_bad_lines='ignore')
+            else: df = pd.read_excel(f'cache/data/{filename}', encoding_errors='replace', on_bad_lines='ignore')
             if fetchWhat[1].upper() in df.columns:
                 df_column = fetchWhat[1].upper()
             else: 

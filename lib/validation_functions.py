@@ -32,7 +32,12 @@ def parseDataWithTemplate(df, template):
                         int(row['Length'] if row['Length'] != 'MEMO' else -1)))
                 #Collects all the enum columns and all the allowed values in that column.
                 elif row['Data type'] == 'Enum':
+                    df[data_column] = df[data_column].astype('category')
                     enum_names_with_values.append((data_column, row['EnumValues'].split(', ')))
+                elif row['Data type'] == 'Int':
+                    df[data_column] = df[data_column].astype(int)
+                elif row['Data type'] == 'Real':
+                    df[data_column] = df[data_column].astype(float)
                 break
         # Raises ValueError if mandatory column was missing from the dataframe.
         if not found and is_mandatory:

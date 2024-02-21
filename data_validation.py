@@ -128,12 +128,10 @@ if __name__ == '__main__':
     args, names = parser.parse_known_args()
     
     os.makedirs('cache', exist_ok=True)
-    #args.datapath = 'data'
     if args.clean:
         shutil.rmtree('cache')
     elif args.datapath:
-        #shutil.rmtree('output/')
-        #shutil.rmtree('cache/data')
+        os.makedirs('cache/data', exist_ok=True)
         correctFolder(args.datapath, 'cache/data')
     else:
         #TODO: adds the new file to the cache from the data. Maybe it does it inside args.datapath only instead of doing current behaviour...
@@ -150,8 +148,7 @@ if __name__ == '__main__':
         rows = []
         for entity in scoped_entities:
             entity_info = getEntityInfo(entity)
-            table_sources = get_all_data_sources(
-                entity_info['Target Entity'].astype(str).iloc[0], get_dependencies=False)
+            table_sources = get_all_data_sources(entity_info['Target Entity'].astype(str).iloc[0])
             for entity_field, source_map in table_sources.items():
                 if source_map[0] != '' and source_map[1] != '':
                     try:
@@ -169,7 +166,6 @@ if __name__ == '__main__':
                             = tuple(source_map)
         pd.DataFrame(rows).to_excel('cache/all_entity_source_maps.xlsx', index=False)
     else:
-        #TODO: cache relations
         df = pd.read_excel('cache/all_entity_source_maps.xlsx')
         for _, row in df.iterrows():
             entity = row['Entity Name']
@@ -190,24 +186,6 @@ if __name__ == '__main__':
     dependency_rows = []
     for relative_path, file_name, file_extension in list_files_recursive(args.datapath):
         entity_info = getEntityInfo(file_name)
-        
-        #TODO: Cache this too...
-        template, indexes, stagingRelations = \
-            generate_template(entity_info['Staging Table'].astype(str).iloc[0], force=False)
-        entityRelations = get_entity_relations(entity_info['Target Entity'].astype(str).iloc[0])
-
-        if file_extension == '.csv':
-            input_df = pd.read_csv(f'{args.datapath}/{file_name}{file_extension}',
-                keep_default_na=False, low_memory=False)
-        elif file_extension == '.xlsx':
-            input_df = pd.read_excel(f'{args.datapath}/{file_name}{file_extension}',
-                keep_default_na=False, low_memory=False)
-        else:
-            continue
-    
-        validated_data, entity_dependencies, logs, sqls = \
-            validateDataframe(input_df, template, indexes, stagingRelations, entityRelations, all_entity_source_maps, file_name)
-
         base_path = f'output/python/{relative_path}/{file_name}'
         sql_base_path = f'output/sql/{file_name}'
         if not os.path.exists(f'{base_path}/logs'):
@@ -215,6 +193,25 @@ if __name__ == '__main__':
         if not os.path.exists(f'{sql_base_path}'):
             os.makedirs(f'{sql_base_path}')
         
+        #TODO: Cache this too...
+        template, indexes, stagingRelations = \
+            generate_template(entity_info['Staging Table'].astype(str).iloc[0], force=False)
+        entityRelations = get_entity_relations(entity_info['Target Entity'].astype(str).iloc[0])
+
+        if file_extension == '.csv':
+            input_df = pd.read_csv(f'{args.datapath}/{file_name}{file_extension}', encoding_errors='replace')
+        elif file_extension == '.xlsx':
+            input_df = pd.read_excel(f'{args.datapath}/{file_name}{file_extension}', encoding_errors='replace')
+        else:
+            continue
+        
+        validated_data, entity_dependencies, logs, sqls = \
+            validateDataframe(input_df, template, indexes, stagingRelations, entityRelations, all_entity_source_maps, file_name)
+
+        with pd.ExcelWriter(f'{base_path}/{file_name}.xlsx') as writer:
+            input_df.to_excel(writer, sheet_name='Raw Data', index=False)
+            pd.DataFrame(template).to_excel(writer, sheet_name='Template', index=False)
+
         with pd.ExcelWriter(f'{base_path}/{file_name}_validated.xlsx') as writer:
             for company, company_df in validated_data.items():
                 company_df.to_excel(writer, sheet_name = company if company != '' else file_name, index = False)
