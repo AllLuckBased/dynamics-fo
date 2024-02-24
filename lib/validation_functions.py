@@ -1,7 +1,7 @@
 from bidict import bidict
 from lib.validation_errors import *
 
-def parseDataWithTemplate(df, template):
+def parseDataWithTemplate(df, template, logs):
     # Information required to collect:
     mandatory_columns = []
     enum_names_with_values = []
@@ -25,20 +25,24 @@ def parseDataWithTemplate(df, template):
                 found = True
                 excel_to_d365_mapping[data_column] = d365_column_name
 
-                # Collects all the string columns, casts the dataframe, and stores the max size.
-                if row['Data type'] == 'String':
-                    df[data_column] = df[data_column].astype(str)
-                    string_columns_with_size.append((data_column, 
-                        int(row['Length'] if row['Length'] != 'MEMO' else -1)))
-                #Collects all the enum columns and all the allowed values in that column.
-                elif row['Data type'] == 'Enum':
-                    df[data_column] = df[data_column].astype('category')
-                    enum_names_with_values.append((data_column, row['EnumValues'].split(', ')))
-                elif row['Data type'] == 'Int':
-                    df[data_column] = df[data_column].astype(int)
-                elif row['Data type'] == 'Real':
-                    df[data_column] = df[data_column].astype(float)
-                break
+                try:
+                    # Collects all the string columns, casts the dataframe, and stores the max size.
+                    if row['Data type'] == 'String':
+                        df[data_column] = df[data_column].astype(str)
+                        string_columns_with_size.append((data_column, 
+                            int(row['Length'] if row['Length'] != 'MEMO' else -1)))
+                    #Collects all the enum columns and all the allowed values in that column.
+                    elif row['Data type'] == 'Enum':
+                        df[data_column] = df[data_column].astype('category')
+                        enum_names_with_values.append((data_column, row['EnumValues'].split(', ')))
+                    elif row['Data type'] == 'Int':
+                        df[data_column] = df[data_column].astype(int)
+                    elif row['Data type'] == 'Real':
+                        df[data_column] = df[data_column].astype(float)
+                    break
+                except:
+                    logs.append(DataTypeError(data_column))
+                    
         # Raises ValueError if mandatory column was missing from the dataframe.
         if not found and is_mandatory:
             raise ValueError(f'"{d365_column_name}"')
@@ -51,6 +55,7 @@ def validateMandatoryFields(df, result_df, mandatory_columns, excel_to_d365_mapp
         result_df = result_df[(result_df[mandatory_column_name].notna())]
         error_df = df[(df[mandatory_column_name].isna())]
         if error_df.shape[0] > 0:
+            df.loc[error_df.index, 'PwCErrorReason'] += f'Mandatory column {mandatory_column_name} empty;'
             logs.append(MissingDataError(d365_column_name, ', '.join(map(str, error_df.index))))
     return result_df
 
@@ -100,6 +105,7 @@ def validateStringFields(df, result_df, string_columns_with_size, excel_to_d365_
         
         error_df = df[(df[string_column_name].str.len() > int(size))]
         if error_df.shape[0] > 0:
+            df.loc[error_df.index, 'PwCErrorReason'] += f'{string_column_name} exceeds {size} characters;'
             logs.append(StringSizeError(excel_to_d365_mapping[string_column_name], size, 
                 error_df[string_column_name].unique().tolist(), ', '.join(map(str, error_df.index))))
 
@@ -121,17 +127,20 @@ def validateIndexIntegrity(df, result_df, indexes, excel_to_d365_mapping, logs):
         result_df = result_df[~result_df.duplicated(subset=df_index_names, keep='first')]
 
         #Check whether the duplicated index rows are exact same or conflicting.
-        error_df = df[df.duplicated(subset=df_index_names, keep=False)]
+        error_df = df[df.duplicated(subset=df_index_names, keep='first')]
         if error_df.shape[0] > 0:
             grouped_duplicates = error_df.groupby(df_index_names)
             for category, group_df in grouped_duplicates:
-                all_duplicated = group_df[~group_df.duplicated(keep=False)]
+                all_duplicated = group_df[group_df.duplicated(keep=False)]
                 if all_duplicated.shape[0] == 0:
+                    df.loc[group_df.index, 'PwCErrorReason'] += f'Duplicated row;'
                     logs.append(DuplicateRowsError(', '.join(index), category, ', '.join(map(str, group_df.index))))
                 else:
+                    df.loc[error_df.index, 'PwCErrorReason'] += f'Data conflict on {index};'
                     logs.append(DataConflictError(', '.join(index), category, ', '.join(map(str, group_df.index))))
     return result_df
 
+#TODO: Add Error reason for this as well
 def validateEnumFields(df, result_df, enum_names_with_values, excel_to_d365_mapping, logs):
     for enum_column_name, values in enum_names_with_values:
         #Check whether its and integer or string. If its a string, then cast it to str first before validating.

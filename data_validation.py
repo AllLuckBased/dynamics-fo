@@ -56,16 +56,12 @@ def validateDataframe(input_df, template, indexes, stagingRelations, entityRelat
     #Stores the sql validation script commands in the order: Null check, String length check, Enum value check.
     sqls = ['', '', '']
 
-    if input_df.shape[0] == 0:
-        logs[''].append(NoValidDataError())
-        return (input_df, validated_data, logs, sqls)
-
     # This will parse the template and generate a mapping between data columns and template columns.
     # Additionally also casts the string columns into str if not already so for out input_df.
     # Note: While mandatory_column has template column names, both string and enum lists have data column names.
     try:
         excelToTemplateColumnMapping, mandatory_columns, string_columns_with_size, enum_names_with_values = \
-            parseDataWithTemplate(input_df, template)
+            parseDataWithTemplate(input_df, template, logs[''])
         for mand_column in mandatory_columns:
             sqls[0] += not_null_sql(filename, mand_column)
         for string_column_with_size in string_columns_with_size:
@@ -75,8 +71,9 @@ def validateDataframe(input_df, template, indexes, stagingRelations, entityRelat
     # Exception is raised if data is missing a mandatory column.
     except ValueError as e:
         logs[''].append(MissingColumnError(e))
-        return (input_df, validated_data, logs, sqls)
+        return (None, None, validated_data, logs, sqls)
 
+    input_df['PwCErrorReason'] = ''
     # Search the data for a column with a name like dataareaid.
     # If found, group validate the df based on it, if not then validate the entirety of the df at once.
     entity_dependencies = {}
@@ -103,7 +100,7 @@ def validateDataframe(input_df, template, indexes, stagingRelations, entityRelat
             string_columns_with_size, indexes, enum_names_with_values, logs[''])
     
     if len(logs.keys()) > 1 and '' in logs: logs.pop('')
-    return (validated_data, entity_dependencies, logs, sqls)
+    return (validated_data, input_df[input_df['PwCErrorReason'] != ''], entity_dependencies, logs, sqls)
 
 #TODO: Make tree
 class DependencyTreeNode:
@@ -199,23 +196,31 @@ if __name__ == '__main__':
         entityRelations = get_entity_relations(entity_info['Target Entity'].astype(str).iloc[0])
 
         if file_extension == '.csv':
-            input_df = pd.read_csv(f'{args.datapath}/{file_name}{file_extension}', encoding_errors='replace')
+            input_df = pd.read_csv(f'{args.datapath}/{file_name}{file_extension}', keep_default_na=False, encoding_errors='replace')
         elif file_extension == '.xlsx':
-            input_df = pd.read_excel(f'{args.datapath}/{file_name}{file_extension}', encoding_errors='replace')
+            input_df = pd.read_excel(f'{args.datapath}/{file_name}{file_extension}', keep_default_na=False, encoding_errors='replace')
         else:
             continue
         
-        validated_data, entity_dependencies, logs, sqls = \
+        validated_data, error_df, entity_dependencies, logs, sqls = \
             validateDataframe(input_df, template, indexes, stagingRelations, entityRelations, all_entity_source_maps, file_name)
 
         with pd.ExcelWriter(f'{base_path}/{file_name}.xlsx') as writer:
             input_df.to_excel(writer, sheet_name='Raw Data', index=False)
             pd.DataFrame(template).to_excel(writer, sheet_name='Template', index=False)
-
-        with pd.ExcelWriter(f'{base_path}/{file_name}_validated.xlsx') as writer:
-            for company, company_df in validated_data.items():
-                company_df.to_excel(writer, sheet_name = company if company != '' else file_name, index = False)
         
+        input_df.columns = input_df.columns.str.upper()
+        if 'DATAAREAID' in input_df.columns:
+            input_df['DATAAREAID'] = input_df['DATAAREAID'].astype(str)
+            input_df['DATAAREAID'] = input_df['DATAAREAID'].str.upper()
+            with pd.ExcelWriter(f'{base_path}/{file_name}_separated.xlsx') as writer:
+                grouped_df = input_df.groupby('DATAAREAID')
+                for company, group_df in grouped_df:
+                    try:
+                        group_df.to_excel(writer, sheet_name = company if company != '' else 'Unknown', index = False)
+                    except ValueError as e:
+                        logs[''].append(EnumValueError('DATAAREAID', [company], []))
+
         #making the sql validation files...
         if sqls[0] != '': 
             with open(f'{sql_base_path}/mandatory.sql', 'w') as file:
@@ -276,6 +281,15 @@ if __name__ == '__main__':
                 file.write(f'{error}\nFor DATAAREAID(s): {companies}\n\n')
 
             file.write(f'Valid DATAAREAID(s) were:\n {valid_companies}\n\n')
+        
+        if validated_data is None:
+            continue
+
+        with pd.ExcelWriter(f'{base_path}/{file_name}_validated.xlsx') as writer:
+            for company, company_df in validated_data.items():
+                company_df.to_excel(writer, sheet_name = company if company != '' else file_name, index = False)
+        if not error_df.empty:
+            error_df.to_excel(f'{base_path}/{file_name}_errors.xlsx', index=False)
 
     pd.DataFrame(rows).to_excel(f'output/overall_report.xlsx', index=False)
     pd.DataFrame(dependency_rows).to_excel(f'output/dependencies.xlsx', index=False)

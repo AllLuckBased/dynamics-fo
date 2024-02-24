@@ -11,8 +11,8 @@ def hot_fetch_data(fetchWhat, optional, company=None):
     for filename in os.listdir('cache/data/'):
         if filename.startswith(fetchWhat[0] + "."):
             if filename.endswith(".csv"):
-                df = pd.read_csv(f'cache/data/{filename}', encoding_errors='replace', on_bad_lines='ignore')
-            else: df = pd.read_excel(f'cache/data/{filename}', encoding_errors='replace', on_bad_lines='ignore')
+                df = pd.read_csv(f'cache/data/{filename}', encoding_errors='replace', keep_default_na=False, on_bad_lines='skip')
+            else: df = pd.read_excel(f'cache/data/{filename}', encoding_errors='replace', keep_default_na=False, on_bad_lines='skip')
             if fetchWhat[1].upper() in df.columns:
                 df_column = fetchWhat[1].upper()
             else: 
@@ -131,6 +131,7 @@ def validate_dependencies(input_df, company, excelToTemplateColumnMapping, stagi
         for column, data in source_data.items():
             error_df = input_df[~input_df[excelToTemplateColumnMapping.inv[column]].isin(data)]
             if error_df.shape[0] > 0:
+                input_df.loc[error_df.index, 'PwCErrorReason'] += f'Source reference missing for {column};'
                 logs.append(KeyViolation(column, 
                     error_df[excelToTemplateColumnMapping.inv[column]].unique().tolist(), 
                     ', '.join(map(str, error_df.index)))

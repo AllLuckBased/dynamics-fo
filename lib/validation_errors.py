@@ -39,6 +39,20 @@ class MissingColumnError(ValidationErrors):
         return f"FATAL: Mandatory column '{self.columnName}' was missing from the data.\n" + \
                f"{f'Entity Name: {self.entity_name}\n' if self.entity_name else ''}"
 
+class DataTypeError(ValidationErrors):
+    def __init__(self, columnName, entity_name=None):
+        super().__init__(3, 'Column data type mismatch!!')
+        self.columnName = columnName
+        self.entity_name = entity_name
+    
+    def shortLog(self):
+        return f"Column: {self.columnName}"
+    
+    def log(self):
+        return f"FATAL: Data found in the column {self.columnName} is not of proper type" + \
+               f"{f'Entity Name: {self.entity_name}\n' if self.entity_name else ''}"
+
+
 class MissingDataError(ValidationErrors):
     def __init__(self, columnName, rows, company=None, entity_name=None):
         super().__init__(2, 'Mandatory column has some missing data!')
@@ -207,7 +221,7 @@ class SourceEntityMissing(ValidationErrors):
     
 class KeyViolation(ValidationErrors):
     def __init__(self, columnName, rejected_values, rows, company=None, entity_name=None):
-        super().__init__(2, 'Column value not in related table!')
+        super().__init__(2, 'Referenced value was not found!')
         self.columnName = columnName
         self.rejected_values = rejected_values
         self.rows = rows
@@ -218,7 +232,7 @@ class KeyViolation(ValidationErrors):
         return f"Column: {self.columnName}, Rejected: {self.rejected_values}"
 
     def log(self):
-        return f"ERROR: Some values in {self.columnName} does not refer to a :\n" + \
+        return f"ERROR: Some values in {self.columnName} were missing in its source data:\n" + \
                f"Following values were rejected: {self.rejected_values}\n" + \
                f"{f'Row Indices: {self.rows}\n' if self.rows else ''}" + \
                f"{f'Legal Entity: {self.company}\n' if self.company else ''}" + \
