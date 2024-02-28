@@ -1,9 +1,10 @@
 import os
+import json
 import argparse
 import pandas as pd
 import xml.etree.ElementTree as ET
 
-from lib import *
+from lib.common import *
 
 def get_required_paths(model_name):
     referenced_models = get_references(model_name)
@@ -58,6 +59,7 @@ def generate_template(staging_table_name, force):
     ignored_index_fields = ['DefinitionGroup', 'ExecutionId', 'RecId']
     ignored_table_fields = ['DefinitionGroup', 'ExecutionId', 'IsSelected', 'TransferStatus']
 
+
     model_name = identify_model(staging_table_name)
     main_paths, edt_paths, enum_paths = get_required_paths(model_name)
 
@@ -88,15 +90,16 @@ def generate_template(staging_table_name, force):
         if name in ignored_table_fields:
             continue
         
-        data_type = field.get('{http://www.w3.org/2001/XMLSchema-instance}type').replace('AxTableField', '')
-
+        data_type = field.get('{http://www.w3.org/2001/XMLSchema-instance}type')\
+            .replace('AxTableField', '').replace('TableField', '')       
+        
         # If string size is directly available in the staging table, awesome!
         string_size = field.find('StringSize')
         if string_size is not None: 
             string_size = string_size.text
         
         # If it is not available, make sure its a FieldString before looking into its EDT
-        if data_type == 'String' and string_size is None:
+        if 'String' in data_type and string_size is None:
             if field.find('ExtendedDataType') is None:
                 string_size = 10
             else:
@@ -151,7 +154,7 @@ def generate_template(staging_table_name, force):
 
         is_unique = 'Yes' if name in unique_fields else 'No'
 
-        if data_type == 'Enum':
+        if 'Enum' in data_type and field.find('EnumType') is not None:
             enum_type = field.find('EnumType').text
             
             if enum_type in enum_from_docs:
@@ -175,25 +178,24 @@ def generate_template(staging_table_name, force):
             enum_values = ''
 
         mandatory = field.find('Mandatory')
-
+        mandatory = mandatory.text if mandatory is not None else 'No'
         row = {
             'D365 Column Name': name,
             'Data type': data_type,
-            'Length': string_size if string_size is not None else 'NULL',
+            'Length': string_size if string_size is not None else '',
             'IsUniqueField': is_unique,
-            #'IsNullable': 'No', Check how this logic works with Shubhadeep da.
-            'EnumValues': enum_values,
-            'Mandatory': mandatory.text if mandatory is not None else 'No'
+            'AllowedValues': enum_values,
+            'Mandatory':  mandatory,
+            'IsNullable': 'No' if mandatory == 'Yes' else 'Yes'
         }
-        
         rows.append(row)
-    return (rows, indexes)
+    return rows, indexes
 
 def merge_excel_files(entity_info_list, path_to_sample_data):
     if not os.path.exists('templates/merged/'):
         os.makedirs('templates/merged/')
     for entity_info in entity_info_list:
-        filename = entity_info['Data Entity'].astype(str).iloc[0]
+        filename = encode_filename(entity_info['Data Entity'].astype(str).iloc[0])
         try:
             with pd.ExcelWriter(f'templates/merged/{filename}.xlsx') as writer:
                 df1 = pd.read_excel(f'templates/{filename}.xlsx')
@@ -211,20 +213,21 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--force', action='store_true', help='Omits the fields which are throwing errors.')
     args, names = parser.parse_known_args()
 
-    if not os.path.exists('templates/'):
-        os.makedirs('templates/')
+    if not os.path.exists('templates/indexes/'):
+        os.makedirs('templates/indexes/')
     if args.excel:
         inputs = pd.read_excel(args.excel, header=None)
         names = inputs.iloc[:, 0].astype(str).tolist()
         
     for name in names:
-        try:
-            entityInfo = getEntityInfo(name)
-        except ValueError:
-            continue
-        template_rows = generate_template(entityInfo['Staging Table'].astype(str).iloc[0], False)
+        try: entityInfo = getEntityInfo(name)
+        except ValueError: continue
+
+        template, indexes = generate_template(
+            entityInfo['Staging Table'].astype(str).iloc[0], force = args.force)
         
-        fileName = format_for_windows_filename(entityInfo['Data Entity'].astype(str).iloc[0])
-        pd.DataFrame(template_rows[0]).to_excel(f'templates/{fileName}.xlsx', index=False)
+        fileName = encode_filename(entityInfo['Data Entity'].astype(str).iloc[0])
+        pd.DataFrame(template).to_excel(f'templates/{fileName}.xlsx', index=False)
+        with open(f'templates/indexes/{fileName}.txt', 'w') as file: json.dump(indexes, file)
     if args.merge:
         merge_excel_files(names, args.merge)
