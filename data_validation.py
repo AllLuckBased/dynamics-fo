@@ -11,10 +11,12 @@ from template_from_table import generate_template
 # Suppress the specific warning from openpyxl
 warnings.simplefilter("ignore", UserWarning)
 
-def validate_data(df, mandatory_columns, string_columns_with_size, indexes, enum_names_with_values):
+def validate_data(df, mandatory_columns, preferred_columns,
+                   string_columns_with_size, indexes, enum_names_with_values):
     # Copy the df to be able to progressively filter it while validating all the errors.
     result_df = df.copy().drop('PwCErrorReason', axis=1).drop('PwCWarnReason', axis=1)
-
+    
+    validatePreferredFields(df, preferred_columns)
     # For each mandatory field, make sure every row is populated.
     # result_df will be generated after dropping the rows with missing mandatory fields.
     result_df = validateMandatoryFields(df, result_df, mandatory_columns)
@@ -33,7 +35,7 @@ def validate_data(df, mandatory_columns, string_columns_with_size, indexes, enum
 
     return result_df
 
-def validateDataframe(input_df, template, indexes, companies=None):
+def validateDataframe(input_df, template, indexes, companies=None, preferred_only=False):
     #To quickly identify which data column maps to which template column, convert all columns to upper.
     input_df.columns = input_df.columns.str.upper()
     
@@ -57,13 +59,19 @@ def validateDataframe(input_df, template, indexes, companies=None):
 
     # This checks the data types are proper or not and casts the columns appropriately...
     # ... additionally it also verifies all the mandatory columns are present.
-    parsed_df, mandatory_columns, string_columns_with_size, enum_names_with_values = \
-        parseDataWithTemplate(input_df, template)
+    parsed_df, mandatory_columns, preferred_columns, string_columns_with_size, enum_names_with_values = \
+        parseDataWithTemplate(input_df, template, preferred_only)
+    
+    if preferred_only:
+        for column in input_df.columns:
+            if column not in ['DATAAREAID', 'PwCErrorReason', 'PwCWarnReason'] \
+                and column not in mandatory_columns and column not in preferred_columns:
+                parsed_df = parsed_df.drop(column, axis=1)
 
     #If a column named DATAAREAID is present then it validates for each LE separately
-    if 'DATAAREAID' in input_df.columns:
-        input_df['DATAAREAID'] = input_df['DATAAREAID'].astype(str)
-        input_df['DATAAREAID'] = input_df['DATAAREAID'].str.upper()
+    if 'DATAAREAID' in parsed_df.columns:
+        parsed_df['DATAAREAID'] = parsed_df['DATAAREAID'].astype(str)
+        parsed_df['DATAAREAID'] = parsed_df['DATAAREAID'].str.upper()
 
         grouped_df = parsed_df.groupby('DATAAREAID')
         for company, group_df in grouped_df:
@@ -71,27 +79,28 @@ def validateDataframe(input_df, template, indexes, companies=None):
                 input_df.loc[group_df.index, 'PwCErrorReason'] += 'Unspecified Legal Entity;'
                 separated_data['Unspecified'] = group_df
                 continue
-            separated_data[company] = group_df.drop('PwCErrorReason', axis=1).drop('PwCWarnReason', axis=1)
 
             if companies is not None and company not in companies: continue
-            validated_df = validate_data(group_df, mandatory_columns,
+            separated_data[company] = group_df.drop('PwCErrorReason', axis=1).drop('PwCWarnReason', axis=1)
+            validated_df = validate_data(group_df, mandatory_columns, preferred_columns,
                 string_columns_with_size, indexes, enum_names_with_values)
             if validated_df.shape[0] > 0:
                 validated_data[company] = validated_df
     else:
-        validated_df = validate_data(parsed_df, mandatory_columns, 
+        validated_df = validate_data(parsed_df, mandatory_columns, preferred_columns,
             string_columns_with_size, indexes, enum_names_with_values)
         if validated_df.shape[0] > 0:
                 validated_data['GLOBAL'] = validated_df
     
-    return separated_data, validated_data, \
-        input_df[(input_df['PwCErrorReason'] != '') | (input_df['PwCWarnReason'] != '')]
+    return separated_data, validated_data, input_df[(input_df['PwCErrorReason'] != '')],\
+        input_df[(input_df['PwCWarnReason'] != '')]
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--datapath', help='Path to data directory')
     parser.add_argument('-t', '--tmplpath', help='Path to stored templates directory')
     parser.add_argument('-c', '--companies', nargs='+', help='Only validate for specific companies')
+    parser.add_argument('-p', '--preferred_only', action='store_true', help='Discards the nullable columns')
     args, names = parser.parse_known_args()
     
     if args.datapath is None and os.path.exists('data'): args.datapath = 'data'
@@ -129,21 +138,29 @@ if __name__ == '__main__':
         if file_extension == '.csv':
             input_df = pd.read_csv(f'{args.datapath}/{file_name}{file_extension}', keep_default_na=False, encoding_errors='replace')
         else:
-            input_df = pd.read_excel(f'{args.datapath}/{file_name}{file_extension}', keep_default_na=False, encoding_errors='replace')
+            input_df = pd.read_excel(f'{args.datapath}/{file_name}{file_extension}', keep_default_na=False)
         
         with pd.ExcelWriter(f'{base_path}/{file_name}.xlsx') as writer:
             input_df.to_excel(writer, sheet_name='Raw Data', index=False)
 
-        separated_data, validated_data, error_df = validateDataframe(input_df, template, indexes, args.companies)
-        with pd.ExcelWriter(f'{base_path}/{file_name}_separated.xlsx') as writer:
-            for company, company_df in separated_data.items():
-                company_df.to_excel(writer, sheet_name = company, index = False)
-
-        if not error_df.empty: 
+        separated_data, validated_data, error_df, warnings_df = \
+            validateDataframe(input_df, template, indexes, args.companies, args.preferred_only)
+        
+        if len(separated_data.keys()) != 0:
+            with pd.ExcelWriter(f'{base_path}/{file_name}_separated.xlsx') as writer:
+                for company, company_df in separated_data.items():
+                    company_df.to_excel(writer, sheet_name = company, index = False)
+        
+        if not warnings_df.empty:
+            with pd.ExcelWriter(f'{base_path}/{file_name}_warnings.xlsx') as writer:
+                warnings_df.to_excel(writer, sheet_name='Warnings', index=False)
+                pd.DataFrame(template).to_excel(writer, sheet_name='Template', index=False)
+        
+        if not error_df.empty:
             with pd.ExcelWriter(f'{base_path}/{file_name}_errors.xlsx') as writer:
                 error_df.to_excel(writer, sheet_name='Errors', index=False)
                 pd.DataFrame(template).to_excel(writer, sheet_name='Template', index=False)
-        
+
         if len(validated_data.keys()) != 0:
             with pd.ExcelWriter(f'{base_path}/{file_name}_validated.xlsx') as writer:
                 for company, company_df in validated_data.items():

@@ -2,7 +2,7 @@ import re
 import json
 import pandas as pd
 
-def parseDataWithTemplate(df, template):
+def parseDataWithTemplate(df, template, preferred_only):
     # Information required to collect:
     mandatory_columns = []
     preferred_columns = []
@@ -12,7 +12,8 @@ def parseDataWithTemplate(df, template):
     data_columns = df.columns.tolist()
     data_columns.remove('PwCErrorReason')
     data_columns.remove('PwCWarnReason')
-    data_columns.remove('DATAAREAID')
+    if 'DATAAREAID' in data_columns:
+        data_columns.remove('DATAAREAID')
 
     for row in template:
         datatype = row['Data type']
@@ -25,10 +26,16 @@ def parseDataWithTemplate(df, template):
             df['PwCErrorReason'] += f'Mandatory column {d365_column_name} was missing!;'
         elif data_column not in df.columns and prefer_mandatory: 
             df['PwCWarnReason'] += f'Prefered column {d365_column_name} was missing!;'
-        elif data_column in df.columns: data_columns.remove(data_column)
+        
+        if data_column in df.columns: data_columns.remove(data_column)
         else: continue
 
-        if is_mandatory: mandatory_columns.append(data_column)
+        if prefer_mandatory and not is_mandatory: 
+            preferred_columns.append(data_column)
+
+        if is_mandatory: 
+            mandatory_columns.append(data_column)
+            print(d365_column_name)
         if datatype != 'Enum':
             df[data_column] = df[data_column].astype(str)
             custom_regexp, standard_regexps = None, None
@@ -39,19 +46,19 @@ def parseDataWithTemplate(df, template):
                 else: custom_regexp = re.compile(row['AllowedValues'])
 
             if datatype == 'String':
-                df.loc[df[df[data_column].str.contains(
-                    r'[^A-Za-z0-9\s.\-,]' if custom_regexp is None else custom_regexp
-                    )].index, 'PwCWarnReason' if custom_regexp is None else 'PwCErrorReason'
-                ] += f'{data_column} contains suspicious value;'
+                if custom_regexp:
+                    df.loc[df[df[data_column].str.contains(custom_regexp)].index, 
+                        'PwCWarnReason' if custom_regexp is None else 'PwCErrorReason'
+                    ] += f'{data_column} contains suspicious value;'
                 string_columns_with_size.append((data_column, 
                     int(row['Length'] if row['Length'] != 'MEMO' else -1)))
             elif row['Data type'] == 'Int':
                 df.loc[df[df[data_column].str.contains(
-                    r'[^0-9]' if custom_regexp is None else custom_regexp
+                    r'[^0-9\-]' if custom_regexp is None else custom_regexp
                     )].index, 'PwCErrorReason'] += f'{data_column} contains invalid int value;'
             elif row['Data type'] == 'Real':
                 df.loc[df[df[data_column].str.contains(
-                    r'[^0-9.]' if custom_regexp is None else custom_regexp
+                    r'[^0-9.\-]' if custom_regexp is None else custom_regexp
                     )].index, 'PwCErrorReason'] += f'{data_column} contains invalid real value;'
         else:
             df[data_column] = df[data_column].astype('category')
@@ -61,7 +68,8 @@ def parseDataWithTemplate(df, template):
         for data_column in data_columns:
             df['PwCWarnReason'] += f'{data_column} was unmapped;'
     
-    return df[df['PwCErrorReason'] == ''], mandatory_columns, string_columns_with_size, enum_names_with_values
+    return df[df['PwCErrorReason'] == ''], mandatory_columns, preferred_columns, \
+            string_columns_with_size, enum_names_with_values
 
 def validateMandatoryFields(df, result_df, mandatory_columns):
     for mandatory_column_name in mandatory_columns:
@@ -69,6 +77,11 @@ def validateMandatoryFields(df, result_df, mandatory_columns):
         error_df = df[(df[mandatory_column_name].isna())]
         df.loc[error_df.index, 'PwCErrorReason'] += f'Mandatory column {mandatory_column_name} empty;'
     return result_df
+
+def validatePreferredFields(df, preferred_columns):
+    for preferred_columns_name in preferred_columns:
+        error_df = df[(df[preferred_columns_name].isna())]
+        df.loc[error_df.index, 'PwCWarnReason'] += f'Preferred column {preferred_columns_name} empty;'
 
 def validateStringFields(df, result_df, string_columns_with_size, truncate=True):
     # Creating another copy of the df to compare there is no loss of data on truncation

@@ -154,6 +154,7 @@ def decode_filename(encoded_name):
 def identify_model(search_term):
     directories = [d for d in os.listdir(root_path)]
     search_types = ['AxTable'] if 'Staging' in search_term else ['AxDataEntityView', 'AxView']
+    directories = []
     for search_type in search_types:
         for directory in directories:
             directory_path = f'{root_path}/{directory}/{directory}/{search_type}'
@@ -162,8 +163,24 @@ def identify_model(search_term):
             if os.path.exists(directory_path):
                 files = [f.lower() for f in os.listdir(directory_path)]
                 if search_term.lower()+'.xml' in files:
-                    return directory
-            
+                    directories.append(directory)
+    if len(directories) > 1:
+        print("Found multiple models:-")
+    
+        for index, value in enumerate(directories, start=1):
+            print(f"{index}. {value}")
+
+        try:
+            user_choice = int(input("Enter the number corresponding to your choice: "))
+            if 1 <= user_choice <= len(directories):
+                return directories[user_choice - 1]
+            else:
+                print("Invalid choice. Please enter a valid number.")
+        except ValueError:
+            print("Invalid input. Please enter a number.")
+    else: return directories[0]
+
+
 def get_references(model_name):
     descriptor_path = f'{root_path}/{model_name}/Descriptor/{model_name}.xml'
     if model_name == 'ApplicationSuite':

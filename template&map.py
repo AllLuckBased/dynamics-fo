@@ -50,7 +50,7 @@ for name in names:
         os.makedirs('entity_maps/')
 
     template_rows = generate_template(entity_info['Staging Table'].astype(str).iloc[0], False)
-    fileName = format_for_windows_filename(entity_info['Data Entity'].astype(str).iloc[0])
+    fileName = encode_filename(entity_info['Data Entity'].astype(str).iloc[0])
     pd.DataFrame(template_rows[0]).to_excel(f'templates/{fileName}.xlsx', index=False)
     
     write_source_map(get_all_data_sources(entity_info['Target Entity'].astype(str).iloc[0]), f'entity_maps/{fileName}.xlsx')
