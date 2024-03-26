@@ -33,7 +33,7 @@ def validate_data(df, mandatory_columns, preferred_columns,
     # result_df will be generated after dropping all rows with invalid enum position or backend value.
     #result_df = validateEnumFields(df, result_df, enum_names_with_values, excel_to_d365_mapping)
 
-    return result_df
+    return result_df, df
 
 def validateDataframe(input_df, template, indexes, companies=None, preferred_only=False):
     #To quickly identify which data column maps to which template column, convert all columns to upper.
@@ -55,7 +55,7 @@ def validateDataframe(input_df, template, indexes, companies=None, preferred_onl
     input_df['PwCWarnReason'] = ''
     input_df['PwCErrorReason'] = ''
     #This will store the LE wise separated and validated data.
-    separated_data, validated_data = {}, {}
+    separated_data, validated_data, error_data = {}, {}, {}
 
     # This checks the data types are proper or not and casts the columns appropriately...
     # ... additionally it also verifies all the mandatory columns are present.
@@ -70,8 +70,8 @@ def validateDataframe(input_df, template, indexes, companies=None, preferred_onl
 
     #If a column named DATAAREAID is present then it validates for each LE separately
     if 'DATAAREAID' in parsed_df.columns:
-        parsed_df['DATAAREAID'] = parsed_df['DATAAREAID'].astype(str)
-        parsed_df['DATAAREAID'] = parsed_df['DATAAREAID'].str.upper()
+        parsed_df.loc[:, 'DATAAREAID'] = parsed_df['DATAAREAID'].astype(str)
+        parsed_df.loc[:, 'DATAAREAID'] = parsed_df['DATAAREAID'].str.upper()
 
         grouped_df = parsed_df.groupby('DATAAREAID')
         for company, group_df in grouped_df:
@@ -82,17 +82,21 @@ def validateDataframe(input_df, template, indexes, companies=None, preferred_onl
 
             if companies is not None and company not in companies: continue
             separated_data[company] = group_df.drop('PwCErrorReason', axis=1).drop('PwCWarnReason', axis=1)
-            validated_df = validate_data(group_df, mandatory_columns, preferred_columns,
+            validated_df, group_df = validate_data(group_df, mandatory_columns, preferred_columns,
                 string_columns_with_size, indexes, enum_names_with_values)
             if validated_df.shape[0] > 0:
                 validated_data[company] = validated_df
+            if group_df[(group_df['PwCErrorReason'] != '')].shape[0] > 0:
+                error_data[company] = group_df[(group_df['PwCErrorReason'] != '')]
     else:
-        validated_df = validate_data(parsed_df, mandatory_columns, preferred_columns,
+        validated_df, parsed_df = validate_data(parsed_df, mandatory_columns, preferred_columns,
             string_columns_with_size, indexes, enum_names_with_values)
         if validated_df.shape[0] > 0:
                 validated_data['GLOBAL'] = validated_df
+        if parsed_df[(parsed_df['PwCErrorReason'] != '')].shape[0] > 0:
+            error_data['GLOBAL'] = parsed_df[(parsed_df['PwCErrorReason'] != '')]
     
-    return separated_data, validated_data, input_df[(input_df['PwCErrorReason'] != '')],\
+    return separated_data, validated_data, error_data,\
         input_df[(input_df['PwCWarnReason'] != '')]
 
 if __name__ == '__main__':
@@ -143,7 +147,7 @@ if __name__ == '__main__':
         with pd.ExcelWriter(f'{base_path}/{file_name}.xlsx') as writer:
             input_df.to_excel(writer, sheet_name='Raw Data', index=False)
 
-        separated_data, validated_data, error_df, warnings_df = \
+        separated_data, validated_data, error_data, warnings_df = \
             validateDataframe(input_df, template, indexes, args.companies, args.preferred_only)
         
         if len(separated_data.keys()) != 0:
@@ -156,10 +160,10 @@ if __name__ == '__main__':
                 warnings_df.to_excel(writer, sheet_name='Warnings', index=False)
                 pd.DataFrame(template).to_excel(writer, sheet_name='Template', index=False)
         
-        if not error_df.empty:
+        if len(error_data.keys()) != 0:
             with pd.ExcelWriter(f'{base_path}/{file_name}_errors.xlsx') as writer:
-                error_df.to_excel(writer, sheet_name='Errors', index=False)
-                pd.DataFrame(template).to_excel(writer, sheet_name='Template', index=False)
+                for company, company_df in error_data.items():
+                    company_df.to_excel(writer, sheet_name = company, index = False)
 
         if len(validated_data.keys()) != 0:
             with pd.ExcelWriter(f'{base_path}/{file_name}_validated.xlsx') as writer:

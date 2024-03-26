@@ -47,7 +47,7 @@ def parseDataWithTemplate(df, template, preferred_only):
 
             if datatype == 'String':
                 if custom_regexp:
-                    df.loc[df[df[data_column].str.contains(custom_regexp)].index, 
+                    df.loc[df[(~df[data_column].str.contains(custom_regexp)) & (df[data_column]!='')].index, 
                         'PwCWarnReason' if custom_regexp is None else 'PwCErrorReason'
                     ] += f'{data_column} contains suspicious value;'
                 string_columns_with_size.append((data_column, 
@@ -104,10 +104,10 @@ def validateStringFields(df, result_df, string_columns_with_size, truncate=True)
         
         # Checking if there was loss of data after truncation.
         if len(unique_values_og_df) > len(unique_values_truncated_df):
-            lost_unique_values = {
-                value for value in unique_values_og_df - unique_values_truncated_df 
-                    if value[:size] in unique_values_og_df
-            }
+            lost_unique_values = set()
+            for value in unique_values_og_df - unique_values_truncated_df:
+                if value[:size].strip() in unique_values_og_df:
+                    lost_unique_values.add(value)
 
             result_df = result_df[~result_df[string_column_name].isin(lost_unique_values)]
             error_df = df[(df[string_column_name].isin(lost_unique_values))]
@@ -136,17 +136,9 @@ def validateIndexIntegrity(df, result_df, indexes, keep='first'):
                     result_df[df_index_name] = result_df[df_index_name].str.lstrip()
         if(len(df_index_names) == 0): continue
 
-        error_df = df[df.duplicated(subset=df_index_names, keep=keep)]
-        if error_df.shape[0] > 0:
-            grouped_duplicates = error_df.groupby(df_index_names)
-            for _, group_df in grouped_duplicates:
-                all_duplicated = group_df[group_df.duplicated(keep=False)]
-                if all_duplicated.shape[0] > 0:
-                    df.loc[error_df.index, 'PwCErrorReason'] += f'Data conflict on {index};'
-                    result_df = result_df[~result_df.duplicated(subset=df_index_names, keep=False)]
-                else:
-                    df.loc[group_df.index, 'PwCErrorReason'] += f'Duplicated row;'
-                    result_df = result_df[~result_df.duplicated(subset=df_index_names, keep=keep)]
+        error_df = result_df[result_df.duplicated(subset=df_index_names, keep=False)]
+        result_df = result_df[~result_df.duplicated(subset=df_index_names, keep='first')]
+        df.loc[error_df.index, 'PwCErrorReason'] += f'Duplicated row;'
     return result_df
 
 #TODO: Add Error reason for this as well, check label values too.
