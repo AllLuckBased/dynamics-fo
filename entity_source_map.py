@@ -113,7 +113,8 @@ def get_all_data_sources(entity_name, no_blanks=False, prevRoot=None):
             if data_source is not None and data_field is not None:
                 if 'Entity' in data_source.text and data_source.text != 'LegalEntity':
                     inner_map = get_all_data_sources(data_source.text, prevRoot=root)
-                    field_table_map[name_text] = inner_map[data_field.text]
+                    try: field_table_map[name_text] = inner_map[data_field.text]
+                    except: pass
                 else:
                     field_table_map[name_text] = [data_source.text, data_field.text]
             elif computed_field is not None:
@@ -137,7 +138,6 @@ if __name__ == '__main__':
         inputs = pd.read_excel(args.excel, header=None)
         names = inputs.iloc[:, 0].astype(str).tolist()
 
-    names = ["Shared category"]
     for name in names:
         try:
             entity_info = getEntityInfo(name)

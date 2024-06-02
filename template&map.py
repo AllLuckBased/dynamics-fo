@@ -49,9 +49,12 @@ for name in names:
     if not os.path.exists('entity_maps/'):
         os.makedirs('entity_maps/')
 
-    template_rows = generate_template(entity_info['Staging Table'].astype(str).iloc[0], False)
-    fileName = encode_filename(entity_info['Data Entity'].astype(str).iloc[0])
-    pd.DataFrame(template_rows[0]).to_excel(f'templates/{fileName}.xlsx', index=False)
+    try:
+        template_rows = generate_template(entity_info['Staging Table'].astype(str).iloc[0], args.force)
+        fileName = encode_filename(entity_info['Data Entity'].astype(str).iloc[0])
+        pd.DataFrame(template_rows[0]).to_excel(f'templates/{fileName}.xlsx', index=False)
+    except:
+        continue
     
     write_source_map(get_all_data_sources(entity_info['Target Entity'].astype(str).iloc[0]), f'entity_maps/{fileName}.xlsx')
     merge_template_with_map(fileName, args.merge)

@@ -1,4 +1,5 @@
 import json
+import shutil
 import warnings
 import argparse
 
@@ -11,12 +12,11 @@ from template_from_table import generate_template
 # Suppress the specific warning from openpyxl
 warnings.simplefilter("ignore", UserWarning)
 
-def validate_data(df, mandatory_columns, preferred_columns,
+def validate_data(df, mandatory_columns,
                    string_columns_with_size, indexes, enum_names_with_values):
     # Copy the df to be able to progressively filter it while validating all the errors.
     result_df = df.copy().drop('PwCErrorReason', axis=1).drop('PwCWarnReason', axis=1)
     
-    validatePreferredFields(df, preferred_columns)
     # For each mandatory field, make sure every row is populated.
     # result_df will be generated after dropping the rows with missing mandatory fields.
     result_df = validateMandatoryFields(df, result_df, mandatory_columns)
@@ -35,9 +35,31 @@ def validate_data(df, mandatory_columns, preferred_columns,
 
     return result_df, df
 
-def validateDataframe(input_df, template, indexes, companies=None, preferred_only=False):
+legal_entity_map = {
+    'BCL' :	'BCHL',
+    'DAT' :	'DATA',
+    'TFNL':	'EHIL',
+    'FMN' :	'FMNP',
+    'GFZ' :	'GFCP',
+    'GPPC':	'GPPL',
+    'GSC' :	'GSCL',
+    'GTC' :	'GTCD',
+    'EFML':	'NEFM',
+    'KNO' :	'NNFM',
+    'ROM' :	'PEOP',
+    'AEL' : 'GFCP',
+    'AASL': 'GFCP',
+    'GAI' : 'GFCP',
+    'GSCN': 'ABTL',
+    'OLTL': 'ABTL',
+    'KFL' : 'PFMC',
+    'AAFS': 'GFCP',
+    'NGM' : 'FMNP'
+}
+
+def validateDataframe(input_df, template, indexes, companies=None):
     #To quickly identify which data column maps to which template column, convert all columns to upper.
-    input_df.columns = input_df.columns.str.upper()
+    input_df.columns = input_df.columns.astype(str).str.upper()
     
     #Update DF index by 2, accounting for header & 0 based index
     input_df.set_index(pd.Index(range(2, len(input_df) + 2)), inplace=True)
@@ -59,19 +81,17 @@ def validateDataframe(input_df, template, indexes, companies=None, preferred_onl
 
     # This checks the data types are proper or not and casts the columns appropriately...
     # ... additionally it also verifies all the mandatory columns are present.
-    parsed_df, mandatory_columns, preferred_columns, string_columns_with_size, enum_names_with_values = \
-        parseDataWithTemplate(input_df, template, preferred_only)
+    try:
+        parsed_df, mandatory_columns, string_columns_with_size, enum_names_with_values = \
+            parseDataWithTemplate(input_df, template)
+    except Exception as e:
+        raise e
     
-    if preferred_only:
-        for column in input_df.columns:
-            if column not in ['DATAAREAID', 'PwCErrorReason', 'PwCWarnReason'] \
-                and column not in mandatory_columns and column not in preferred_columns:
-                parsed_df = parsed_df.drop(column, axis=1)
-
     #If a column named DATAAREAID is present then it validates for each LE separately
     if 'DATAAREAID' in parsed_df.columns:
         parsed_df.loc[:, 'DATAAREAID'] = parsed_df['DATAAREAID'].astype(str)
         parsed_df.loc[:, 'DATAAREAID'] = parsed_df['DATAAREAID'].str.upper()
+        parsed_df.loc[:, 'DATAAREAID'].replace(legal_entity_map, inplace=True)
 
         grouped_df = parsed_df.groupby('DATAAREAID')
         for company, group_df in grouped_df:
@@ -79,17 +99,16 @@ def validateDataframe(input_df, template, indexes, companies=None, preferred_onl
                 input_df.loc[group_df.index, 'PwCErrorReason'] += 'Unspecified Legal Entity;'
                 separated_data['Unspecified'] = group_df
                 continue
-
             if companies is not None and company not in companies: continue
             separated_data[company] = group_df.drop('PwCErrorReason', axis=1).drop('PwCWarnReason', axis=1)
-            validated_df, group_df = validate_data(group_df, mandatory_columns, preferred_columns,
+            validated_df, group_df = validate_data(group_df, mandatory_columns,
                 string_columns_with_size, indexes, enum_names_with_values)
             if validated_df.shape[0] > 0:
                 validated_data[company] = validated_df
             if group_df[(group_df['PwCErrorReason'] != '')].shape[0] > 0:
                 error_data[company] = group_df[(group_df['PwCErrorReason'] != '')]
     else:
-        validated_df, parsed_df = validate_data(parsed_df, mandatory_columns, preferred_columns,
+        validated_df, parsed_df = validate_data(parsed_df, mandatory_columns,
             string_columns_with_size, indexes, enum_names_with_values)
         if validated_df.shape[0] > 0:
                 validated_data['GLOBAL'] = validated_df
@@ -104,7 +123,6 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--datapath', help='Path to data directory')
     parser.add_argument('-t', '--tmplpath', help='Path to stored templates directory')
     parser.add_argument('-c', '--companies', nargs='+', help='Only validate for specific companies')
-    parser.add_argument('-p', '--preferred_only', action='store_true', help='Discards the nullable columns')
     args, names = parser.parse_known_args()
     
     if args.datapath is None and os.path.exists('data'): args.datapath = 'data'
@@ -112,13 +130,20 @@ if __name__ == '__main__':
     if args.tmplpath is None and os.path.exists('templates'): args.tmplpath = 'templates'
     if args.tmplpath is None: os.makedirs('templates/')
     
+    # If no -c args provided, it defaults to the file res/companies.txt.
+    # Empty -c argument will delete this file and remove any company specific validation.
+    # Mentioning some companies in -c will reset the file res/companies.txt with the new companies.
+    # Example: python data_validation -c fmnp bagl gscl hfmp
     if args.companies is None:
-        with open('res/companies.txt', 'r') as file: args.companies = json.load(file)
-    elif len(args.companies) == 0:
-        args.companies = None
-        if os.path.exists('res/companies.txt'): os.remove('res/companies.txt')
+        try:
+            with open('res/companies.txt', 'r') as file: args.companies = json.load(file)
+            if len(args.companies) == 0:
+                args.companies = None
+                if os.path.exists('res/companies.txt'): os.remove('res/companies.txt')
+        except FileNotFoundError: pass
     else:
         with open('res/companies.txt', 'w') as file: json.dump(args.companies, file)
+    
     
     if args.companies is not None:
         print(f"Only validating the data for the companies: {args.companies}")
@@ -136,8 +161,9 @@ if __name__ == '__main__':
             with open(f'{args.tmplpath}/indexes/{file_name}.txt', 'r') as file: indexes = json.load(file)
 
         base_path = f'validation-results/{relative_path}/{file_name}'
-        if not os.path.exists(f'{base_path}'):
-            os.makedirs(f'{base_path}')
+        if os.path.exists(f'{base_path}'):
+            shutil.rmtree(f'{base_path}')
+        os.makedirs(f'{base_path}')
         
         if file_extension == '.csv':
             input_df = pd.read_csv(f'{args.datapath}/{file_name}{file_extension}', keep_default_na=False, encoding_errors='replace')
@@ -147,9 +173,11 @@ if __name__ == '__main__':
         with pd.ExcelWriter(f'{base_path}/{file_name}.xlsx') as writer:
             input_df.to_excel(writer, sheet_name='Raw Data', index=False)
 
-        separated_data, validated_data, error_data, warnings_df = \
-            validateDataframe(input_df, template, indexes, args.companies, args.preferred_only)
-        
+        try:
+            separated_data, validated_data, error_data, warnings_df = \
+                validateDataframe(input_df, template, indexes, args.companies)
+        except Exception as e: continue
+
         if len(separated_data.keys()) != 0:
             with pd.ExcelWriter(f'{base_path}/{file_name}_separated.xlsx') as writer:
                 for company, company_df in separated_data.items():
@@ -166,6 +194,10 @@ if __name__ == '__main__':
                     company_df.to_excel(writer, sheet_name = company, index = False)
 
         if len(validated_data.keys()) != 0:
+            print(file_name)
             with pd.ExcelWriter(f'{base_path}/{file_name}_validated.xlsx') as writer:
                 for company, company_df in validated_data.items():
+                    if company in ['FZAP', 'FZGS', 'FZGF', 'FZIG', 'FZAG', 'FZGP', 'FZAB']:
+                        print(company)
                     company_df.to_excel(writer, sheet_name = company, index = False)
+                print('\n')

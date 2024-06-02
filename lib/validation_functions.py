@@ -2,40 +2,44 @@ import re
 import json
 import pandas as pd
 
-def parseDataWithTemplate(df, template, preferred_only):
+def parseDataWithTemplate(df, template):
+    def find_duplicates(arr):
+        seen, duplicates = set(), set()
+        for x in arr:
+            if x in seen: duplicates.add(x)
+            else: seen.add(x)
+        return list(duplicates)
+    
     # Information required to collect:
     mandatory_columns = []
-    preferred_columns = []
     enum_names_with_values = []
     string_columns_with_size = []
     
     data_columns = df.columns.tolist()
     data_columns.remove('PwCErrorReason')
     data_columns.remove('PwCWarnReason')
+    if len(find_duplicates(data_columns)) > 0:
+        print(f'Duplicate columns found in the headers:\n{find_duplicates(data_columns)}')
+        raise Exception('ParseError')
     if 'DATAAREAID' in data_columns:
         data_columns.remove('DATAAREAID')
 
     for row in template:
         datatype = row['Data type']
         is_mandatory = row['Mandatory'] == 'Yes'
-        prefer_mandatory = row['IsNullable'] == 'No'
         d365_column_name = row['D365 Column Name']
         
         data_column = d365_column_name.upper()
         if data_column not in df.columns and is_mandatory: 
-            df['PwCErrorReason'] += f'Mandatory column {d365_column_name} was missing!;'
-        elif data_column not in df.columns and prefer_mandatory: 
-            df['PwCWarnReason'] += f'Prefered column {d365_column_name} was missing!;'
+            print(f'Mandatory column {d365_column_name} was missing!\n')
+            raise Exception('ParseError')
         
         if data_column in df.columns: data_columns.remove(data_column)
         else: continue
 
-        if prefer_mandatory and not is_mandatory: 
-            preferred_columns.append(data_column)
-
         if is_mandatory: 
             mandatory_columns.append(data_column)
-            print(d365_column_name)
+
         if datatype != 'Enum':
             df[data_column] = df[data_column].astype(str)
             custom_regexp, standard_regexps = None, None
@@ -67,21 +71,15 @@ def parseDataWithTemplate(df, template, preferred_only):
     if len(data_columns) > 0:
         for data_column in data_columns:
             df['PwCWarnReason'] += f'{data_column} was unmapped;'
-    
-    return df[df['PwCErrorReason'] == ''], mandatory_columns, preferred_columns, \
+    return df[df['PwCErrorReason'] == ''], mandatory_columns, \
             string_columns_with_size, enum_names_with_values
 
 def validateMandatoryFields(df, result_df, mandatory_columns):
     for mandatory_column_name in mandatory_columns:
-        result_df = result_df[(result_df[mandatory_column_name].notna())]
-        error_df = df[(df[mandatory_column_name].isna())]
+        result_df = result_df[(result_df[mandatory_column_name] != '')]
+        error_df = df[(df[mandatory_column_name] == '')]
         df.loc[error_df.index, 'PwCErrorReason'] += f'Mandatory column {mandatory_column_name} empty;'
     return result_df
-
-def validatePreferredFields(df, preferred_columns):
-    for preferred_columns_name in preferred_columns:
-        error_df = df[(df[preferred_columns_name].isna())]
-        df.loc[error_df.index, 'PwCWarnReason'] += f'Preferred column {preferred_columns_name} empty;'
 
 def validateStringFields(df, result_df, string_columns_with_size, truncate=True):
     # Creating another copy of the df to compare there is no loss of data on truncation
@@ -105,9 +103,14 @@ def validateStringFields(df, result_df, string_columns_with_size, truncate=True)
         # Checking if there was loss of data after truncation.
         if len(unique_values_og_df) > len(unique_values_truncated_df):
             lost_unique_values = set()
+            value_to_truncated = {}
             for value in unique_values_og_df - unique_values_truncated_df:
-                if value[:size].strip() in unique_values_og_df:
+                stripped_value = value[:size].strip()
+                if stripped_value in unique_values_og_df:
                     lost_unique_values.add(value)
+                elif stripped_value in value_to_truncated:
+                    lost_unique_values.update([value_to_truncated[stripped_value], value])
+                else: value_to_truncated[stripped_value] = value
 
             result_df = result_df[~result_df[string_column_name].isin(lost_unique_values)]
             error_df = df[(df[string_column_name].isin(lost_unique_values))]
@@ -136,9 +139,15 @@ def validateIndexIntegrity(df, result_df, indexes, keep='first'):
                     result_df[df_index_name] = result_df[df_index_name].str.lstrip()
         if(len(df_index_names) == 0): continue
 
-        error_df = result_df[result_df.duplicated(subset=df_index_names, keep=False)]
-        result_df = result_df[~result_df.duplicated(subset=df_index_names, keep='first')]
+        temp_df_index_names = []
+        for index_name in df_index_names:
+            result_df[f'{index_name}_upper'] = result_df[index_name].apply(lambda x: x.upper())
+            temp_df_index_names.append(f'{index_name}_upper')
+
+        error_df = result_df[result_df.duplicated(subset=temp_df_index_names, keep=False)]
+        result_df = result_df[~result_df.duplicated(subset=temp_df_index_names, keep='first')]
         df.loc[error_df.index, 'PwCErrorReason'] += f'Duplicated row;'
+        result_df = result_df.drop(temp_df_index_names, axis=1)
     return result_df
 
 #TODO: Add Error reason for this as well, check label values too.

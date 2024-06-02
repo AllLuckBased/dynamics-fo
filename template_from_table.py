@@ -48,6 +48,7 @@ edt_from_docs = {
 enum_from_docs = {
     'NoYes': 'No, Yes', 
     'boolean': 'false, true', 
+    'MenuItemType': 'Display, Output, Action',
     'RoleAssignmentMode': 'None, Manual, Automatic',
     'RoleAssignmentStatus': 'None, Enabled, Disabled',
     'PreferredCalendar': 'Gregorian, Hijri, UmAlQura',
