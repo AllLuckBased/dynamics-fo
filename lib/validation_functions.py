@@ -141,7 +141,7 @@ def validateIndexIntegrity(df, result_df, indexes, keep='first'):
 
         temp_df_index_names = []
         for index_name in df_index_names:
-            result_df[f'{index_name}_upper'] = result_df[index_name].apply(lambda x: x.upper())
+            result_df[f'{index_name}_upper'] = result_df[index_name].apply(lambda x: x.upper() if isinstance(x, str) else x)
             temp_df_index_names.append(f'{index_name}_upper')
 
         error_df = result_df[result_df.duplicated(subset=temp_df_index_names, keep=False)]
