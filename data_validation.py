@@ -91,7 +91,7 @@ def validateDataframe(input_df, template, indexes, companies=None):
     if 'DATAAREAID' in parsed_df.columns:
         parsed_df.loc[:, 'DATAAREAID'] = parsed_df['DATAAREAID'].astype(str)
         parsed_df.loc[:, 'DATAAREAID'] = parsed_df['DATAAREAID'].str.upper()
-        parsed_df.loc[:, 'DATAAREAID'].replace(legal_entity_map, inplace=True)
+        parsed_df.loc[:, 'DATAAREAID'] = parsed_df.loc[:, 'DATAAREAID'].replace(legal_entity_map)
 
         grouped_df = parsed_df.groupby('DATAAREAID')
         for company, group_df in grouped_df:

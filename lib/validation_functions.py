@@ -146,7 +146,10 @@ def validateIndexIntegrity(df, result_df, indexes, keep='first'):
 
         error_df = result_df[result_df.duplicated(subset=temp_df_index_names, keep=False)]
         result_df = result_df[~result_df.duplicated(subset=temp_df_index_names, keep='first')]
+
+        conflict_df = error_df[error_df.duplicated(keep=False)]
         df.loc[error_df.index, 'PwCErrorReason'] += f'Duplicated row;'
+        df.loc[conflict_df.index, 'PwCErrorReason'] += f'Conflicted row;'
         result_df = result_df.drop(temp_df_index_names, axis=1)
     return result_df
 
