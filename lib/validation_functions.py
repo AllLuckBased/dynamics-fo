@@ -1,5 +1,6 @@
 import re
 import json
+import unicodedata
 import pandas as pd
 
 def parseDataWithTemplate(df, template):
@@ -128,6 +129,11 @@ def validateStringFields(df, result_df, string_columns_with_size, truncate=True)
     return result_df
 
 def validateIndexIntegrity(df, result_df, indexes, keep='first'):
+    def remove_special_characters(text):
+        normalized_text = unicodedata.normalize('NFKD', text)
+        cleaned_text = re.sub(r'[^\x20-\x7E]', '', normalized_text)
+        return cleaned_text
+    
     for index in indexes:
         df_index_names = []
         for index_column in index:
@@ -137,6 +143,9 @@ def validateIndexIntegrity(df, result_df, indexes, keep='first'):
                 if df[df_index_name].dtype == 'O':
                     df[df_index_name] = df[df_index_name].str.lstrip()
                     result_df[df_index_name] = result_df[df_index_name].str.lstrip()
+                    df[df_index_name] = df[df_index_name].apply(remove_special_characters)
+                    result_df[df_index_name] = result_df[df_index_name].apply(remove_special_characters)
+        
         if(len(df_index_names) == 0): continue
 
         temp_df_index_names = []

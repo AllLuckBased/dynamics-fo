@@ -166,10 +166,26 @@ if __name__ == '__main__':
         os.makedirs(f'{base_path}')
         
         if file_extension == '.csv':
-            input_df = pd.read_csv(f'{args.datapath}/{file_name}{file_extension}', keep_default_na=False, encoding_errors='replace')
+            input_df = pd.read_csv(f'{args.datapath}/{file_name}{file_extension}', keep_default_na=False, encoding_errors='replace', low_memory=False)
         else:
             input_df = pd.read_excel(f'{args.datapath}/{file_name}{file_extension}', keep_default_na=False)
         
+        def find_mixed_type_columns(df):
+            mixed_type_columns = []
+            for col in df.columns:
+                if df[col].apply(type).nunique() > 1:
+                    mixed_type_columns.append(col)
+            return mixed_type_columns
+
+        mixed_type_columns = find_mixed_type_columns(input_df)
+
+        def convert_columns_to_str(df, columns):
+            for col in columns:
+                df[col] = df[col].astype(str)
+            return df
+
+        input_df = convert_columns_to_str(input_df, mixed_type_columns)
+
         with pd.ExcelWriter(f'{base_path}/{file_name}.xlsx') as writer:
             input_df.to_excel(writer, sheet_name='Raw Data', index=False)
 
@@ -197,7 +213,4 @@ if __name__ == '__main__':
             print(file_name)
             with pd.ExcelWriter(f'{base_path}/{file_name}_validated.xlsx') as writer:
                 for company, company_df in validated_data.items():
-                    if company in ['FZAP', 'FZGS', 'FZGF', 'FZIG', 'FZAG', 'FZGP', 'FZAB']:
-                        print(company)
                     company_df.to_excel(writer, sheet_name = company, index = False)
-                print('\n')
