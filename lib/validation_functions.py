@@ -99,7 +99,7 @@ def validateStringFields(df, result_df, string_columns_with_size, truncate=True)
             # Non-mandatory string column was absent from data
             continue
 
-        duplicates = truncated_df[truncated_df.duplicated(f'{string_column_name}_trunc', keep=False)]
+        duplicates = (truncated_df[truncated_df.duplicated(f'{string_column_name}_trunc', keep=False)])[truncated_df[string_column_name].str.len() > size]
                 
         # Checking if there was loss of data after truncation.
         if duplicates.shape[0] > 0:
