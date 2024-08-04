@@ -101,6 +101,7 @@ def validateDataframe(input_df, template, indexes, companies=None):
                 continue
             if companies is not None and company not in companies: continue
             separated_data[company] = group_df.drop('PwCErrorReason', axis=1).drop('PwCWarnReason', axis=1)
+            print(f'Validating company: {company}')
             validated_df, group_df = validate_data(group_df, mandatory_columns,
                 string_columns_with_size, indexes, enum_names_with_values)
             if validated_df.shape[0] > 0:
@@ -108,6 +109,10 @@ def validateDataframe(input_df, template, indexes, companies=None):
             if group_df[(group_df['PwCErrorReason'] != '')].shape[0] > 0:
                 error_data[company] = group_df[(group_df['PwCErrorReason'] != '')]
     else:
+        if 'COMPANY' in parsed_df.columns:
+            parsed_df.loc[:, 'COMPANY'] = parsed_df['COMPANY'].astype(str)
+            parsed_df.loc[:, 'COMPANY'] = parsed_df['COMPANY'].str.upper()
+            parsed_df.loc[:, 'COMPANY'] = parsed_df.loc[:, 'COMPANY'].replace(legal_entity_map)
         validated_df, parsed_df = validate_data(parsed_df, mandatory_columns,
             string_columns_with_size, indexes, enum_names_with_values)
         if validated_df.shape[0] > 0:
@@ -192,7 +197,7 @@ if __name__ == '__main__':
         try:
             separated_data, validated_data, error_data, warnings_df = \
                 validateDataframe(input_df, template, indexes, args.companies)
-        except Exception as e: continue
+        except Exception as e: print(e)
 
         if len(separated_data.keys()) != 0:
             with pd.ExcelWriter(f'{base_path}/{file_name}_separated.xlsx') as writer:

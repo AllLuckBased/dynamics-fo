@@ -151,10 +151,11 @@ def decode_filename(encoded_name):
         .replace("ǀ", "|")
     return decoded_name
 
-def identify_model(search_term):
+def identify_model(search_term, search_types = None):
     directories = [d for d in os.listdir(root_path)]
-    search_types = ['AxTable'] if 'Staging' in search_term else ['AxDataEntityView', 'AxView']
-    directories = []
+    if not search_types:
+        search_types = ['AxTable', 'AxTableExtension'] if 'Staging' in search_term else ['AxDataEntityView', 'AxDataEntityViewExtension', 'AxView']
+    found_directories = []
     for search_type in search_types:
         for directory in directories:
             directory_path = f'{root_path}/{directory}/{directory}/{search_type}'
@@ -162,23 +163,10 @@ def identify_model(search_term):
                 directory_path = f'{root_path}/{directory}/Foundation/{search_type}'
             if os.path.exists(directory_path):
                 files = [f.lower() for f in os.listdir(directory_path)]
-                if search_term.lower()+'.xml' in files:
-                    directories.append(directory)
-    if len(directories) > 1:
-        print("Found multiple models:-")
-    
-        for index, value in enumerate(directories, start=1):
-            print(f"{index}. {value}")
-
-        try:
-            user_choice = int(input("Enter the number corresponding to your choice: "))
-            if 1 <= user_choice <= len(directories):
-                return directories[user_choice - 1]
-            else:
-                print("Invalid choice. Please enter a valid number.")
-        except ValueError:
-            print("Invalid input. Please enter a number.")
-    else: return directories[0]
+                if search_term.lower() +'.xml' in files or \
+                    search_term.lower() +'.extension.xml' in files:
+                    found_directories.append(directory)
+    return found_directories
 
 
 def get_references(model_name):
