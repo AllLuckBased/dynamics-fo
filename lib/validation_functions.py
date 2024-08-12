@@ -99,10 +99,11 @@ def validateStringFields(df, result_df, string_columns_with_size, truncate=True)
             # Non-mandatory string column was absent from data
             continue
 
-        duplicates = (truncated_df[truncated_df.duplicated(f'{string_column_name}_trunc', keep=False)])[truncated_df[string_column_name].str.len() > size]
-                
+        duplicates = truncated_df[truncated_df.duplicated(f'{string_column_name}_trunc', keep=False)]
+        duplicates_og = df[df.duplicated(string_column_name, keep=False)]
+        
         # Checking if there was loss of data after truncation.
-        if duplicates.shape[0] > 0:
+        if duplicates.shape[0] > 0 and duplicates.shape[0] != duplicates_og.shape[0]:
             print(f"Data loss detected after truncating {string_column_name} to {size} characters. ({duplicates.shape[0]})")
             response = input("Do you want to replace the lost values with a standard number sequence? (Yes/Manual/No/Ignore): ")            
             if response.upper().startswith('Y'):
@@ -186,7 +187,7 @@ def validateIndexIntegrity(df, result_df, indexes, keep='first'):
 
         temp_df_index_names = []
         for index_name in df_index_names:
-            result_df[f'{index_name}_upper'] = result_df[index_name].apply(lambda x: x.upper() if isinstance(x, str) else x)
+            result_df[f'{index_name}_upper'] = result_df[index_name].apply(lambda x: x.upper() if isinstance(x, str) else x).str.lstrip().str.rstrip()
             temp_df_index_names.append(f'{index_name}_upper')
 
         error_df = result_df[result_df.duplicated(subset=temp_df_index_names, keep=False)]
