@@ -128,6 +128,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--datapath', help='Path to data directory')
     parser.add_argument('-t', '--tmplpath', help='Path to stored templates directory')
     parser.add_argument('-c', '--companies', nargs='+', help='Only validate for specific companies')
+    parser.add_argument('-s', '--suffix', nargs='+', help='Append this to the name of the folder')
     args, names = parser.parse_known_args()
     
     if args.datapath is None and os.path.exists('data'): args.datapath = 'data'
@@ -166,6 +167,9 @@ if __name__ == '__main__':
             with open(f'{args.tmplpath}/indexes/{file_name}.txt', 'r') as file: indexes = json.load(file)
 
         base_path = f'validation-results/{relative_path}/{file_name}'
+        if args.suffix:
+            base_path += str(args.suffix)
+
         if os.path.exists(f'{base_path}'):
             shutil.rmtree(f'{base_path}')
         os.makedirs(f'{base_path}')
