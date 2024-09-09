@@ -1,20 +1,15 @@
 res/*
 data/*
 templates/*
-validation-results/*
-
+Pre-mock/*
+issues investigation/*
+validation-results*/*
+arpan/*
+data*/*
 *__pycache__/*
 */*__pycache__/*
-Employee V2.xlsx
-abc.xlsx
-arpan.zip
-arpan/*
-data1/*
-data2/*
-issues investigation/*
+*.xlsx
+*.csv
+*.zip
+
 tmp.py
-validation-results older/*
-validation-results--/*
-validation-results-/*
-validation-results-not-old/*
-validation-results-old/*

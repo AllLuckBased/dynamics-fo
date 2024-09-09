@@ -154,6 +154,10 @@ if __name__ == '__main__':
     if args.companies is not None:
         print(f"Only validating the data for the companies: {args.companies}")
 
+    if os.path.exists(f'data/output'):
+        shutil.rmtree(f'data/output')
+    os.makedirs(f'data/output')
+
     for relative_path, file_name, file_extension in list_files_recursive(args.datapath):
         try: entityInfo = getEntityInfo(decode_filename(file_name))
         except ValueError: continue
@@ -221,5 +225,8 @@ if __name__ == '__main__':
         if len(validated_data.keys()) != 0:
             print(file_name)
             with pd.ExcelWriter(f'{base_path}/{file_name}_validated.xlsx') as writer:
+                for company, company_df in validated_data.items():
+                    company_df.to_excel(writer, sheet_name = company, index = False)
+            with pd.ExcelWriter(f'data/output/{file_name}.xlsx') as writer:
                 for company, company_df in validated_data.items():
                     company_df.to_excel(writer, sheet_name = company, index = False)

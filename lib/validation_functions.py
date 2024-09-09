@@ -94,7 +94,7 @@ def validateStringFields(df, result_df, string_columns_with_size, truncate=True)
             df[string_column_name] = df[string_column_name].str.lstrip().str.rstrip()
             result_df.loc[:, string_column_name] = result_df[string_column_name].str.lstrip().str.rstrip()
             # ... but truncates this df to max allowed size before stripping whitespace on right.
-            truncated_df[f'{string_column_name}_trunc'] = truncated_df[string_column_name].str.lower().str.lstrip().str[:size].str.rstrip()
+            truncated_df[f'{string_column_name}_trunc'] = truncated_df[string_column_name].str.lstrip().str[:size].str.rstrip()
         except KeyError:
             # Non-mandatory string column was absent from data
             continue
@@ -102,6 +102,8 @@ def validateStringFields(df, result_df, string_columns_with_size, truncate=True)
         duplicates = truncated_df[truncated_df.duplicated(f'{string_column_name}_trunc', keep=False)]
         duplicates_og = result_df[result_df.duplicated(string_column_name, keep=False)]
         
+        truncated_df[f'{string_column_name}_trunc'] = truncated_df[f'{string_column_name}_trunc'].str.lower()
+
         # Checking if there was loss of data after truncation.
         if duplicates.shape[0] > 0 and duplicates.shape[0] != duplicates_og.shape[0]:
             print(f"Data loss detected after truncating {string_column_name} to {size} characters. ({duplicates.shape[0]})")
