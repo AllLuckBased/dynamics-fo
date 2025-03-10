@@ -1,0 +1,106 @@
+Bank Master ERP Special Character Check Pilot Validation
+
+Bank Accounts--
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'AccountNumber has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+	AccountNumber LIKE '%[^A-Za-z0-9-]%'
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'BankMainAccountIdDisplayValue has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+	BankMainAccountIdDisplayValue LIKE '%[^A-Za-z0-9 -]%'
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'BankAccountId has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+	BankAccountId LIKE '%[^A-Za-z0-9-]%'
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'CompanyStatementName has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+	CompanyStatementName LIKE '%[^A-Za-z0-9 -]%'
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'DestinationName has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+	DestinationName LIKE '%[^A-Za-z0-9 -]%'
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'BanksIdentificationOfCompany has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+	BanksIdentificationOfCompany LIKE '%[^A-Za-z0-9 -]%'
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'Name has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+	Name LIKE '%[^A-Za-z0-9 -]%'
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'RoutingNumber has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+	RoutingNumber LIKE '%[^A-Za-z0-9 -]%'
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'AddressLocationId has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+	AddressLocationId LIKE '%[^A-Za-z0-9 -]%'
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'AddressCounty has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+	AddressCounty LIKE '%[^A-Za-z0-9 -]%'
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'AddressStreet has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+	AddressStreet LIKE '%[^A-Za-z0-9 -]%'
+
+
+Bank Groups---
+
+UPDATE PWC_E_BankGroup
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'BankGroupId has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_BankGroup
+	WHERE 
+	BankGroupId LIKE '%[^A-Za-z0-9-]%'
+
+UPDATE PWC_E_BankGroup
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'Name has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_BankGroup
+	WHERE 
+	Name LIKE '%[^A-Za-z0-9 -]%'
+
+UPDATE PWC_E_BankGroup
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'RoutingNumber has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_BankGroup
+	WHERE 
+	RoutingNumber LIKE '%[^A-Za-z0-9 -]%'
+
+

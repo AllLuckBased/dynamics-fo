@@ -1,0 +1,133 @@
+Bank Master ERP Length Pilot Validation
+
+
+Bank Accounts--
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'AccountNumber exceeds max length 48','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		LEN(AccountNumber) > 48
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'FINANCIALDIMENSIONDISPLAYVALUEOPERATINGUNIT exceeds max length 48','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		LEN(FINANCIALDIMENSIONDISPLAYVALUEOPERATINGUNIT) > 500
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'IBAN exceeds max length 48','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		LEN(IBAN) > 48
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'BankMainAccountIdDisplayValue exceeds max length 500','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		LEN(BankMainAccountIdDisplayValue) > 500
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'BankAccountId exceeds max length 10','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		LEN(BankAccountId) > 10
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'ContactMobilePhone exceeds max length 20','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		LEN(ContactMobilePhone) > 20
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'ContactName exceeds max length 60','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		LEN(ContactName) > 60
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'Name exceeds max length 60','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		LEN(Name) > 60
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'ContactPhoneNumber exceeds max length 20','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		LEN(ContactPhoneNumber) > 20
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'SWIFTCode exceeds max length 20','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		LEN(SWIFTCode) > 20
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'ContactInternetAddress exceeds max length 255','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		LEN(ContactInternetAddress) > 255
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'AddressDescription exceeds max length 60','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		LEN(AddressDescription) > 60
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'AddressStreet exceeds max length 250','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		LEN(AddressStreet) > 250
+
+
+
+
+
+
+
+Bank Groups---
+
+UPDATE PWC_E_BankGroup
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'BankGroupId exceeds max length 10','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankGroup
+	WHERE 
+		LEN(BankGroupId) > 10
+
+UPDATE PWC_E_BankGroup
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'ContactName exceeds max length 60','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankGroup
+	WHERE 
+		LEN(ContactName) > 60
+
+UPDATE PWC_E_BankGroup
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'ContactEmail exceeds max length 80','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankGroup
+	WHERE 
+		LEN(ContactEmail) > 80
+
+UPDATE PWC_E_BankGroup
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'Name exceeds max length 60','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_BankGroup
+	WHERE 
+		LEN(Name) > 60
+
+

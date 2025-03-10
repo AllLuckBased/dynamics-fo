@@ -1,0 +1,384 @@
+Bank Master 
+
+---------------------------------Validation Rules----------------------------
+
+Bank accounts--
+
+CurrencyCode is blank --- Error --- 2
+Name is blank --- Error --- 2
+RoutingNumber is blank --- Error --- 2
+BankAccountId is blank --- Error --- 2
+AccountNumber is blank --- Warning --- 3
+DEFAULTDIMENSIONDISPLAYVALUEOPERATINGUNIT is blank --- Warning --- 3
+IBAN is blank --- Warning --- 3
+BankMainAccountIdDisplayValue is blank --- Warning --- 3
+ActiveFrom is blank --- Warning --- 3
+ActiveTo is blank --- Warning --- 3
+BankAccountStatus is blank --- Warning --- 3
+RoutingNumberType is blank --- Warning --- 3
+BankGroupId is blank --- Warning --- 3
+AllowTransactionsInAdditionalCurrencies is blank --- Warning --- 3
+ContactMobilePhone is blank --- Warning --- 3
+ContactName is blank --- Warning --- 3
+ContactPhoneNumber is blank --- Warning --- 3
+ContactPhoneNumberExtension is blank --- Warning --- 3
+SWIFTCode is blank --- Warning --- 3
+ContactTelexNumber is blank --- Warning --- 3
+ContactInternetAddress is blank --- Warning --- 3
+AddressDescription is blank --- Warning --- 3
+AddressCountry is blank --- Warning --- 3
+AddressCountryISOCode is blank --- Warning --- 3
+AddressState is blank --- Warning --- 3
+AddressCity is blank --- Warning --- 3
+AddressStreet is blank --- Warning --- 3
+AddressZipCode is blank --- Warning --- 3
+LegalEntityID is blank --- Warning --- 3
+
+BankAccountId,DATAAREAID has duplicate values --- Constraint --- 1
+
+BankAccountHoldStatus
+BankAccountStatus enum has invalid enum values --- Error --- 2
+BankCodeType
+RoutingNumberType enum has invalid enum values --- Error --- 2
+
+CurrencyCode is not there in CurrencyCode of Currencies --- Error --- 2
+BankGroupId is not there in BankGroupId of Bank Groups --- Error --- 2
+AddressCountry is not there in COUNTRYREGION of country --- Error --- 2
+AddressCountryISOCode is not there in ISOCODE of country --- Error --- 2
+AddressState is not there in STATE of state --- Error --- 2
+AddressCity is not there in NAME of city --- Error --- 2
+AddressZipCode is not there in ZIPCODE of zipcode --- Error --- 2
+LegalEntityID is not there in LEGALENTITYID of legal entities --- Error --- 2
+DEFAULTDIMENSIONDISPLAYVALUEOPERATINGUNIT is not there in DIMENSIONVALUE of Operating Unit Financial Dimension --- Error --- 2
+BankMainAccountIdDisplayValue is not there in MAINACCOUNTID of Main Account --- Error --- 2
+
+
+
+
+
+Bank Groups--
+
+BankGroupId is blank --- Error --- 2
+RoutingNumberType --- Warning --- 3
+ContactName --- Warning --- 3
+Currency --- Warning --- 3
+ContactEmail --- Warning --- 3
+Name is blank --- Warning --- 3
+ContactPhone --- Warning --- 3
+
+BankGroupId,DATAAREAID has duplicate values --- Constraint --- 1
+
+BankCodeType
+RoutingNumberType enum has invalid enum values --- Error --- 2
+
+CurrencyCode is not there in CurrencyCode of Currencies --- Error --- 2
+
+
+
+-------------------------------Validation script--------------------------------
+
+
+Bank Accounts---
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'AccountNumber is blank when IBAN IS NOT blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		(AccountNumber= '' or AccountNumber is null) AND IBAN IS NOT NULL
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'CurrencyCode is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		CurrencyCode= '' or CurrencyCode is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'Name is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		Name= '' or Name is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'BankAccountId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		BankAccountId= '' or BankAccountId is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'IBAN is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		IBAN= '' or IBAN is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'BankMainAccountIdDisplayValue is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		BankMainAccountIdDisplayValue= '' or BankMainAccountIdDisplayValue is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'BankAccountStatus is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		BankAccountStatus= '' or BankAccountStatus is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'BankGroupId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		BankGroupId= '' or BankGroupId is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'AllowTransactionsInAdditionalCurrencies is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		AllowTransactionsInAdditionalCurrencies= '' or AllowTransactionsInAdditionalCurrencies is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'ContactMobilePhone is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		ContactMobilePhone= '' or ContactMobilePhone is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'ContactName is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		ContactName= '' or ContactName is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'ContactPhoneNumber is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		ContactPhoneNumber= '' or ContactPhoneNumber is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'SWIFTCode is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		SWIFTCode= '' or SWIFTCode is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'ContactInternetAddress is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		ContactInternetAddress= '' or ContactInternetAddress is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'AddressDescription is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		AddressDescription= '' or AddressDescription is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'AddressCountry is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		AddressCountry= '' or AddressCountry is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'AddressState is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		AddressState= '' or AddressState is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'AddressCity is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		AddressCity= '' or AddressCity is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'AddressStreet is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		AddressStreet= '' or AddressStreet is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'LegalEntityID is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		LegalEntityID= '' or LegalEntityID is null
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'BankAccountId,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		BankAccountId IS NOT NULL AND DATAAREAID IS NOT NULL AND CONCAT(BankAccountId,DATAAREAID) IN 
+		(SELECT CONCAT(BankAccountId,DATAAREAID) FROM PWC_E_BankAccount
+		GROUP BY BankAccountId,DATAAREAID HAVING COUNT(*)>1)
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'BankAccountStatus enum has invalid enum values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		BankAccountStatus IS NOT NULL AND BankAccountStatus NOT IN
+		(SELECT MEMBERNAME FROM RETAILENUMVALUETABLE WHERE ENUMNAME LIKE 'BankAccountHoldStatus')
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'RoutingNumberType enum has invalid enum values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE 
+		RoutingNumberType IS NOT NULL AND RoutingNumberType NOT IN
+		(SELECT MEMBERNAME FROM RETAILENUMVALUETABLE WHERE ENUMNAME LIKE 'BankCodeType')
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'CurrencyCode is not there in CurrencyCode of Currencies','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_BankAccount A
+	WHERE 
+		CurrencyCode IS NOT NULL AND CurrencyCode NOT IN 
+		(SELECT B.CurrencyCode FROM PWC_E_CURRENCIES B WHERE  (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.CurrencyCode IS NOT NULL)
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'BankGroupId is not there in BankGroupId of Bank Groups','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_BankAccount A
+	WHERE 
+		BankGroupId IS NOT NULL AND BankGroupId NOT IN 
+		(SELECT B.BankGroupId FROM PWC_E_BankGroup B WHERE  (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.BankGroupId IS NOT NULL)
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'AddressCountry is not there in COUNTRYREGION of country','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_BankAccount A
+	WHERE 
+		AddressCountry IS NOT NULL AND AddressCountry NOT IN 
+		(SELECT B.COUNTRYREGION FROM PWC_E_COUNTRYREGION B WHERE  (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.COUNTRYREGION IS NOT NULL)
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'AddressState is not there in STATE of state','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_BankAccount A
+	WHERE 
+		AddressState IS NOT NULL AND AddressState NOT IN 
+		(SELECT B.STATE FROM PWC_E_STATE B WHERE  (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.STATE IS NOT NULL)
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'AddressCity is not there in NAME of city','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_BankAccount A
+	WHERE 
+		AddressCity IS NOT NULL AND AddressCity NOT IN 
+		(SELECT B.NAME FROM PWC_E_CITY B WHERE  (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.NAME IS NOT NULL)
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'FINANCIALDIMENSIONDISPLAYVALUEOPERATINGUNIT is not there in DIMENSIONVALUE of Operating Unit Financial Dimension','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE FINANCIALDIMENSIONDISPLAYVALUEOPERATINGUNIT is not null and FINANCIALDIMENSIONDISPLAYVALUEOPERATINGUNIT not in
+	(select DIMENSIONVALUE from PWC_E_FINDIMVALUES WHERE FINANCIALDIMENSION LIKE 'OP%')
+
+UPDATE PWC_E_BankAccount
+	SET ERRORDESC = CONCAT(ERRORDESC,'BankMainAccountIdDisplayValue is not there in MAINACCOUNTID of Operating Unit Financial Dimension','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_BankAccount
+	WHERE BankMainAccountIdDisplayValue is not null and BankMainAccountIdDisplayValue not in
+	(select MAINACCOUNTID from PWC_E_MAINACCOUNT)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Bank Groups---
+
+UPDATE PWC_E_BankGroup
+	SET ERRORDESC = CONCAT(ERRORDESC,'BankGroupId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_BankGroup
+	WHERE 
+		BankGroupId= '' or BankGroupId is null
+
+UPDATE PWC_E_BankGroup
+	SET ERRORDESC = CONCAT(ERRORDESC,'RoutingNumberType is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankGroup
+	WHERE 
+		RoutingNumberType= '' or RoutingNumberType is null
+
+UPDATE PWC_E_BankGroup
+	SET ERRORDESC = CONCAT(ERRORDESC,'ContactName is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankGroup
+	WHERE 
+		ContactName= '' or ContactName is null
+
+UPDATE PWC_E_BankGroup
+	SET ERRORDESC = CONCAT(ERRORDESC,'ContactEmail is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankGroup
+	WHERE 
+		ContactEmail= '' or ContactEmail is null
+
+UPDATE PWC_E_BankGroup
+	SET ERRORDESC = CONCAT(ERRORDESC,'Name is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankGroup
+	WHERE 
+		Name= '' or Name is null
+
+UPDATE PWC_E_BankGroup
+	SET ERRORDESC = CONCAT(ERRORDESC,'ContactPhone is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_BankGroup
+	WHERE 
+		ContactPhone= '' or ContactPhone is null
+
+UPDATE PWC_E_BankGroup
+	SET ERRORDESC = CONCAT(ERRORDESC,'BankGroupId,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_BankGroup
+	WHERE 
+		BankGroupId IS NOT NULL AND DATAAREAID IS NOT NULL AND CONCAT(BankGroupId,DATAAREAID) IN 
+		(SELECT CONCAT(BankGroupId,DATAAREAID) FROM PWC_E_BankGroup
+		GROUP BY BankGroupId,DATAAREAID HAVING COUNT(*)>1)
+
+UPDATE PWC_E_BankGroup
+	SET ERRORDESC = CONCAT(ERRORDESC,'RoutingNumberType enum has invalid enum values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_BankGroup
+	WHERE 
+		RoutingNumberType IS NOT NULL AND RoutingNumberType NOT IN
+		(SELECT MEMBERNAME FROM RETAILENUMVALUETABLE WHERE ENUMNAME LIKE 'BankCodeType')
+
+UPDATE PWC_E_BankGroup
+	SET ERRORDESC = CONCAT(ERRORDESC,'Currency is not there in CurrencyCode of Currencies','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_BankGroup A
+	WHERE 
+		Currency IS NOT NULL AND Currency NOT IN 
+		(SELECT B.CurrencyCode FROM PWC_E_CURRENCIES B WHERE  (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.CurrencyCode IS NOT NULL)
+
