@@ -1,0 +1,15 @@
+Curencies ERP Special Character Check Pilot Validation
+
+UPDATE PWC_E_CURRENCIES
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'CURRENCYCODE has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_CURRENCIES
+	WHERE 
+	CURRENCYCODE LIKE '%[^A-Za-z0-9]%'
+
+UPDATE PWC_E_CURRENCIES
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'NAME has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_CURRENCIES
+	WHERE 
+	NAME LIKE '%[^A-Za-z0-9 -]%'
