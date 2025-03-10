@@ -1,0 +1,15 @@
+Language ERP Length Pilot Validation
+
+UPDATE PWC_E_LANGUAGECODE
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'Description exceeds max length 60','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_LANGUAGECODE	
+	WHERE 
+		LEN(Description) > 60
+
+UPDATE PWC_E_LANGUAGECODE
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'LanguageCodeId exceeds max length 15','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_LANGUAGECODE	
+	WHERE 
+		LEN(LanguageCodeId) > 15

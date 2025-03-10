@@ -1,0 +1,16 @@
+Language ERP Special Character Check Pilot Validation
+
+
+UPDATE PWC_E_LANGUAGECODE
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'LanguageCodeId has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_LANGUAGECODE
+	WHERE 
+	LanguageCodeId LIKE '%[^A-Za-z0-9-]%'
+
+UPDATE PWC_E_LANGUAGECODE
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'Description has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_LANGUAGECODE
+	WHERE 
+	Description LIKE '%[^A-Za-z0-9 -]%'

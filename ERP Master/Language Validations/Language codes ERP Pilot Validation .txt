@@ -1,0 +1,34 @@
+Language codes---
+
+Validation rules--
+LanguageCodeId is blank --- Error --- 2
+Description is blank --- Warning --- 3
+LanguageCodeId has duplicate values --- Constraint --- 1
+
+Validation script--
+
+
+
+UPDATE PWC_E_LANGUAGECODE 
+	SET ERRORDESC = CONCAT(ERRORDESC,'LanguageCodeId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_LANGUAGECODE
+	WHERE 
+		LanguageCodeId= '' or LanguageCodeId is null
+
+UPDATE PWC_E_LANGUAGECODE 
+	SET ERRORDESC = CONCAT(ERRORDESC,'Description is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_LANGUAGECODE
+	WHERE 
+		Description= '' or Description is null
+
+UPDATE PWC_E_LANGUAGECODE 
+	SET ERRORDESC = CONCAT(ERRORDESC,'LanguageCodeId,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_LANGUAGECODE
+	WHERE 
+		LanguageCodeId IS NOT NULL AND DATAAREAID IS NOT NULL AND CONCAT(LanguageCodeId,DATAAREAID) IN 
+		(SELECT CONCAT(LanguageCodeId,DATAAREAID) FROM PWC_E_LANGUAGECODE
+		GROUP BY LanguageCodeId,DATAAREAID HAVING COUNT(*)>1)
+

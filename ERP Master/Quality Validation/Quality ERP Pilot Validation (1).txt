@@ -1,0 +1,936 @@
+Quality ERP Pilot Validation
+
+
+-------- Validation Rules ---------------
+
+
+
+---------- Quality Test Instruments
+
+InstrumentId is null --- Error --- 2
+InstrumentDescription is null --- Warning --- 3
+TestMeasurementUnitSymbol is null --- Warning --- 3
+
+InstrumentId,DATAAREAID has duplicate values --- Constraint --- 1
+
+TestMeasurementUnitSymbol is not there in UnitSymbol of Units ---- Error -- 2
+
+
+
+
+
+----- Quality Tests
+
+TestId is null --- Error --- 2
+TestDescription is null --- Warning --- 3
+TestInstrumentId is null --- Warning --- 3
+QualityTestMeasurementType is null --- Warning --- 3
+TestMeasurementUnitSymbol is null --- Warning --- 3
+
+InventTestType
+QualityTestMeasurementType has invalid enum values --- Error --- 2
+
+TestId,DATAAREAID has duplicate values --- Constraint --- 1
+
+TestInstrumentId is not there in InstrumentId of Quality Test Intruments --- Error --- 2
+TestMeasurementUnitSymbol is not there in UnitSymbol of Units ---- Error --- 2
+TestInstrumentId, TestMeasurementUnitSymbol is not matching with Quality Test Instruments ------ Error ---- 2
+QualityTestId, TestMeasurementUnitSymbol is not atching with Quality Tests --- Error --- 2
+
+
+
+
+
+------ Quality Test groups
+
+QualityTestGroupId is null --- Error --- 2
+AcceptableQualityLevelPercentage is null --- Warning --- 3
+Description is null --- Warning --- 3
+ItemSamplingId is null --- Warning --- 3
+
+QualityTestGroupId,DATAAREAID has duplicate values --- Constraint --- 1
+
+ItemSamplingId is not there in SamplingId of Item Sampling --- Error --- 2
+
+
+
+
+
+
+-------Quality Test Variable
+
+VariableId is null --- Error --- 2
+VariableDescription is null --- Warning --- 3
+
+VariableId,DATAAREAID has duplicate values --- Constraint --- 1
+
+
+
+
+
+
+------- Quality Test Variable Outcome
+
+QualityTestVariableId is null --- Error --- 2
+OutcomeId is null --- Error --- 2
+OutcomeDescription is null --- Warning --- 3
+OutcomeStatus is null --- Warning --- 3
+
+QualityTestVariableId, OutcomeId,DATAAREAID has duplicate values --- Constraint --- 1
+
+InventTestOutcomeStatus
+OutcomeStatus has invalid enum values --- Error --- 2
+
+QualityTestVariableId is not there in VariableId of Quality Test Variable --- Error --- 2
+
+
+
+
+
+
+
+
+------- Item Sampling
+
+SamplingId is null --- Error --- 2
+SamplingDescription is null --- Warning --- 3
+FixedInventoryQuantity is null --- Warning --- 3
+QuantityPercentage is null --- Warning --- 3
+WillQualityOrderFullyBlockOrderLineQuantity is null --- Warning --- 3
+
+SamplingId,DATAAREAID has duplicate values --- Constraint --- 1
+
+
+
+
+
+
+-------- Test group Test Assignment
+
+QualityTestGroupId is null --- Error --- 2
+QualityTestId is null --- Error --- 2
+StandardQuantitativeTestMeasurement is null --- Error --- 2
+AcceptableQuantitativeLowerTestMeasurementLimit, AcceptableQuantitativeUpperTestMeasurementLimit is null --- Error --- 2
+AcceptableQuantitativeLowerTestMeasurementLimit is null --- Warning --- 3
+StandardQuantitativeTestMeasurement is null --- Warning --- 3
+AcceptableQuantitativeUpperTestMeasurementLimit is null --- Warning --- 3
+QualitativeTestVariableId is null --- Warning --- 3
+DefaultQualitativeTestMeasurementOutcome is null --- Warning --- 3
+
+
+QualityTestGroupId,QualityTestId,DATAAREAID has duplicate values --- Constraint --- 1
+
+QualityTestGroupId is not there in QualityTestGroupId of Test groups --- Error --- 2
+QualityTestId is not there in TestId of Quality Tests --- Error --- 2
+TestMeasurementUnitSymbol is not there in UnitSymbol of Units ---- Error --- 2
+QualitativeTestVariableId is not there in VariableId of Quality Test variable --- Error --- 2
+DefaultQualitativeTestMeasurementOutcome is not there in OutcomeId of Quality Test Variable Outcome --- Error --- 2
+QualitativeTestVariableId, DefaultQualitativeTestMeasurementOutcome is not matching with Test variable outcome --- Error --- 2
+
+
+
+
+
+
+
+------------- Quality Order Creation Policy V2
+
+ItemNumber is null --- Warning --- 3
+RouteOperationId is null --- Warning --- 3
+AcceptableQualityLevelPercentage is null --- Warning --- 3
+ItemSamplingId is null --- Warning --- 3
+BlockedDocumentationProcess is null --- Warning --- 3
+OperationalSiteId is null --- Warning --- 3
+QualityOrderCreationPolicyType is null --- Warning --- 3
+IsQualityOrderFailureCreatingQuantineOrder is null --- Warning --- 3
+QualityOrderCreationDocumentationEventStage is null --- Warning --- 3
+QualityTestGroupId is null --- Warning --- 3
+
+InventTestBlockProcess
+BlockedDocumentationProcess has invalid enum values --- Error --- 2
+InventTestReferenceType
+QualityOrderCreationPolicyType has invalid enum values --- Error --- 2
+InventTestExecution
+QualityOrderCreationDocumentationEventStage has invalid enum values --- Error --- 2
+
+OperationalSiteId is not there in SITEID of Sites --- Error --- 2
+ItemNumber is not there in ITEMNUMBER of Released Products --- Error --- 2
+ItemSamplingId is not there in SamplingId of item Sampling --- Error --- 2
+QualityTestGroupId is not there in QualityTestGroupId of Test Groups --- Error --- 2
+RouteOperationId is not there in OperationId of Operations --- Error --- 2
+
+
+
+
+
+
+
+------------------------------------------------ Validation Script --------------------------------
+
+
+---------- Quality Test Instruments
+
+ UPDATE PWC_E_QUALITYTESTINSTRUMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'InstrumentId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYTESTINSTRUMENT 	
+	WHERE 
+		InstrumentId= '' or InstrumentId is null
+
+ UPDATE PWC_E_QUALITYTESTINSTRUMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'InstrumentDescription is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_QUALITYTESTINSTRUMENT 	
+	WHERE 
+		InstrumentDescription= '' or InstrumentDescription is null
+
+ UPDATE PWC_E_QUALITYTESTINSTRUMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'TestMeasurementUnitSymbol is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_QUALITYTESTINSTRUMENT 	
+	WHERE 
+		TestMeasurementUnitSymbol= '' or TestMeasurementUnitSymbol is null
+
+ UPDATE PWC_E_QUALITYTESTINSTRUMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'InstrumentId,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_QUALITYTESTINSTRUMENT 	
+	WHERE
+		InstrumentId IS NOT NULL AND CONCAT(InstrumentId,DATAAREAID) IN 
+		(SELECT CONCAT(InstrumentId,DATAAREAID) FROM PWC_E_QUALITYTESTINSTRUMENT
+		GROUP BY InstrumentId,DATAAREAID HAVING COUNT(*)>1)
+
+ UPDATE PWC_E_QUALITYTESTINSTRUMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'TestMeasurementUnitSymbol is not there in UnitSymbol of Units','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYTESTINSTRUMENT A	
+	WHERE
+		TestMeasurementUnitSymbol IS NOT NULL AND TestMeasurementUnitSymbol NOT IN 
+		(SELECT B.UnitSymbol FROM PWC_E_UNIT B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.UnitSymbol IS NOT NULL)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--------- Quality Tests
+
+ UPDATE PWC_E_QUALITYTEST 
+	SET ERRORDESC = CONCAT(ERRORDESC,'TestMeasurementUnitSymbol is not blank when QualityTestMeasurementType is option','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_QUALITYTEST 	
+	WHERE 
+		TestMeasurementUnitSymbol is NOT NULL and QualityTestMeasurementType LIKE '%option%'
+
+ UPDATE PWC_E_QUALITYTEST 
+	SET ERRORDESC = CONCAT(ERRORDESC,'TestId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYTEST 	
+	WHERE 
+		TestId= '' or TestId is null
+
+ UPDATE PWC_E_QUALITYTEST 
+	SET ERRORDESC = CONCAT(ERRORDESC,'TestMeasurementUnitSymbol is blank when QualityTestMeasurementType is not option','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYTEST 	
+	WHERE 
+		(TestMeasurementUnitSymbol= '' or TestMeasurementUnitSymbol is null) and QualityTestMeasurementType NOT LIKE '%option%'
+
+ UPDATE PWC_E_QUALITYTEST 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityTestMeasurementType has invalid enum values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYTEST 	
+	WHERE 
+		QualityTestMeasurementType IS NOT NULL AND QualityTestMeasurementType NOT IN
+		(SELECT MEMBERNAME FROM RETAILENUMVALUETABLE WHERE ENUMNAME LIKE 'InventTestType')
+
+ UPDATE PWC_E_QUALITYTEST 
+	SET ERRORDESC = CONCAT(ERRORDESC,'TestId,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_QUALITYTEST 	
+	WHERE 
+		TestId IS NOT NULL AND CONCAT(TestId,DATAAREAID) IN 
+		(SELECT CONCAT(TestId,DATAAREAID) FROM PWC_E_QUALITYTEST
+		GROUP BY TestId,DATAAREAID HAVING COUNT(*)>1)
+
+ UPDATE PWC_E_QUALITYTEST 
+	SET ERRORDESC = CONCAT(ERRORDESC,'TestInstrumentId is not there in InstrumentId of Quality Test Intruments','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYTEST A
+	WHERE
+		TestInstrumentId IS NOT NULL AND TestInstrumentId NOT IN 
+		(SELECT B.InstrumentId FROM PWC_E_QUALITYTESTINSTRUMENT B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.InstrumentId IS NOT NULL)
+
+ UPDATE PWC_E_QUALITYTEST 
+	SET ERRORDESC = CONCAT(ERRORDESC,'TestMeasurementUnitSymbol is not there in UnitSymbol of Units','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYTEST A
+	WHERE
+		TestMeasurementUnitSymbol IS NOT NULL AND TestMeasurementUnitSymbol NOT IN 
+		(SELECT B.UnitSymbol FROM PWC_E_UNIT B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.UnitSymbol IS NOT NULL)
+
+ UPDATE PWC_E_QUALITYTEST 
+	SET ERRORDESC = CONCAT(ERRORDESC,'TestInstrumentId, TestMeasurementUnitSymbol is not matching with Quality Test Instruments','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYTEST A
+	WHERE
+		TestInstrumentId IS NOT NULL AND 
+		TestMeasurementUnitSymbol IS NOT NULL AND 
+		CONCAT(TestInstrumentId, TestMeasurementUnitSymbol) NOT IN 
+		(SELECT CONCAT(B.InstrumentId, B.TestMeasurementUnitSymbol) FROM PWC_E_QUALITYTESTINSTRUMENT B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL')
+		AND B.InstrumentId IS NOT NULL AND B.TestMeasurementUnitSymbol IS NOT NULL)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--------- Quality Test groups
+
+UPDATE PWC_E_TESTGRP
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'AcceptableQualityLevelPercentage is not a real number','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_TESTGRP	
+	WHERE 
+		AcceptableQualityLevelPercentage LIKE '%[^0-9.]%' AND AcceptableQualityLevelPercentage IS NOT NULL
+
+ UPDATE PWC_E_TESTGRP 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityTestGroupId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRP 	
+	WHERE 
+		QualityTestGroupId= '' or QualityTestGroupId is null
+
+ UPDATE PWC_E_TESTGRP 
+	SET ERRORDESC = CONCAT(ERRORDESC,'AcceptableQualityLevelPercentage is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_TESTGRP 	
+	WHERE 
+		AcceptableQualityLevelPercentage= '' or AcceptableQualityLevelPercentage is null
+
+ UPDATE PWC_E_TESTGRP 
+	SET ERRORDESC = CONCAT(ERRORDESC,'Description is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_TESTGRP 	
+	WHERE 
+		Description= '' or Description is null
+
+ UPDATE PWC_E_TESTGRP 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ItemSamplingId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_TESTGRP 	
+	WHERE 
+		ItemSamplingId= '' or ItemSamplingId is null
+
+ UPDATE PWC_E_TESTGRP 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityTestGroupId,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_TESTGRP 	
+	WHERE 
+		QualityTestGroupId IS NOT NULL AND CONCAT(QualityTestGroupId,DATAAREAID) IN 
+		(SELECT CONCAT(QualityTestGroupId,DATAAREAID) FROM PWC_E_TESTGRP
+		GROUP BY QualityTestGroupId,DATAAREAID HAVING COUNT(*)>1)
+
+ UPDATE PWC_E_TESTGRP 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ItemSamplingId is not there in SamplingId of Item Sampling','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRP A 	
+	WHERE 
+		ItemSamplingId IS NOT NULL AND ItemSamplingId NOT IN 
+		(SELECT B.SamplingId FROM PWC_E_ITEMSAMPLING B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.SamplingId IS NOT NULL)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-------Quality Test Variable
+
+ UPDATE PWC_E_QUALITYTESTVAR 
+	SET ERRORDESC = CONCAT(ERRORDESC,'VariableId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYTESTVAR 	
+	WHERE 
+		VariableId= '' or VariableId is null
+
+ UPDATE PWC_E_QUALITYTESTVAR 
+	SET ERRORDESC = CONCAT(ERRORDESC,'VariableDescription is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_QUALITYTESTVAR 	
+	WHERE 
+		VariableDescription= '' or VariableDescription is null
+
+ UPDATE PWC_E_QUALITYTESTVAR 
+	SET ERRORDESC = CONCAT(ERRORDESC,'VariableId,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_QUALITYTESTVAR 	
+	WHERE 
+		VariableId IS NOT NULL AND CONCAT(VariableId,DATAAREAID) IN 
+		(SELECT CONCAT(VariableId,DATAAREAID) FROM PWC_E_QUALITYTESTVAR
+		GROUP BY VariableId,DATAAREAID HAVING COUNT(*)>1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+------- Quality Test Variable Outcome
+
+
+ UPDATE PWC_E_QUALITYTESTVAROUTCOME 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityTestVariableId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYTESTVAROUTCOME 	
+	WHERE 
+		QualityTestVariableId= '' or QualityTestVariableId is null
+
+ UPDATE PWC_E_QUALITYTESTVAROUTCOME 
+	SET ERRORDESC = CONCAT(ERRORDESC,'OutcomeId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYTESTVAROUTCOME 	
+	WHERE 
+		OutcomeId= '' or OutcomeId is null
+
+ UPDATE PWC_E_QUALITYTESTVAROUTCOME 
+	SET ERRORDESC = CONCAT(ERRORDESC,'OutcomeDescription is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_QUALITYTESTVAROUTCOME 	
+	WHERE 
+		OutcomeDescription= '' or OutcomeDescription is null
+
+ UPDATE PWC_E_QUALITYTESTVAROUTCOME 
+	SET ERRORDESC = CONCAT(ERRORDESC,'OutcomeStatus is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_QUALITYTESTVAROUTCOME 	
+	WHERE 
+		OutcomeStatus= '' or OutcomeStatus is null
+
+UPDATE PWC_E_QUALITYTESTVAROUTCOME
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityTestVariableId, OutcomeId, DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_QUALITYTESTVAROUTCOME
+	WHERE 
+		QualityTestVariableId IS NOT NULL AND OutcomeId IS NOT NULL AND CONCAT(QualityTestVariableId,OutcomeId,DATAAREAID) IN 
+		(SELECT CONCAT(QualityTestVariableId,OutcomeId,DATAAREAID) FROM PWC_E_QUALITYTESTVAROUTCOME
+		GROUP BY QualityTestVariableId,OutcomeId,DATAAREAID HAVING COUNT(*)>1)
+
+ UPDATE PWC_E_QUALITYTESTVAROUTCOME 
+	SET ERRORDESC = CONCAT(ERRORDESC,'OutcomeStatus has invalid enum values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYTESTVAROUTCOME 	
+	WHERE 
+		OutcomeStatus IS NOT NULL AND OutcomeStatus NOT IN
+		(SELECT MEMBERNAME FROM RETAILENUMVALUETABLE WHERE ENUMNAME LIKE 'InventTestOutcomeStatus')
+
+ UPDATE PWC_E_QUALITYTESTVAROUTCOME 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityTestVariableId is not there in VariableId of Quality Test Variable','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYTESTVAROUTCOME A 	
+	WHERE 
+		QualityTestVariableId IS NOT NULL AND QualityTestVariableId NOT IN 
+		(SELECT B.VariableId FROM PWC_E_QUALITYTESTVAR B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.VariableId IS NOT NULL)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+------- Item Sampling
+
+UPDATE PWC_E_ITEMSAMPLING
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'FixedInventoryQuantity is not a real number','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_ITEMSAMPLING	
+	WHERE 
+		FixedInventoryQuantity LIKE '%[^0-9.]%' AND FixedInventoryQuantity IS NOT NULL
+
+UPDATE PWC_E_ITEMSAMPLING
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'QuantityPercentage is not a real number','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_ITEMSAMPLING	
+	WHERE 
+		QuantityPercentage LIKE '%[^0-9.]%' AND QuantityPercentage IS NOT NULL
+
+ UPDATE PWC_E_ITEMSAMPLING 
+	SET ERRORDESC = CONCAT(ERRORDESC,'SamplingId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_ITEMSAMPLING 	
+	WHERE 
+		SamplingId= '' or SamplingId is null
+
+ UPDATE PWC_E_ITEMSAMPLING 
+	SET ERRORDESC = CONCAT(ERRORDESC,'SamplingDescription is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_ITEMSAMPLING 	
+	WHERE 
+		SamplingDescription= '' or SamplingDescription is null
+
+ UPDATE PWC_E_ITEMSAMPLING 
+	SET ERRORDESC = CONCAT(ERRORDESC,'FixedInventoryQuantity is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_ITEMSAMPLING 	
+	WHERE 
+		FixedInventoryQuantity= '' or FixedInventoryQuantity is null
+
+ UPDATE PWC_E_ITEMSAMPLING 
+	SET ERRORDESC = CONCAT(ERRORDESC,'WillQualityOrderFullyBlockOrderLineQuantity is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_ITEMSAMPLING 	
+	WHERE 
+		WillQualityOrderFullyBlockOrderLineQuantity= '' or WillQualityOrderFullyBlockOrderLineQuantity is null
+
+ UPDATE PWC_E_ITEMSAMPLING 
+	SET ERRORDESC = CONCAT(ERRORDESC,'SamplingId,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_ITEMSAMPLING 	
+	WHERE 
+		SamplingId IS NOT NULL AND CONCAT(SamplingId,DATAAREAID) IN 
+		(SELECT CONCAT(SamplingId,DATAAREAID) FROM PWC_E_ITEMSAMPLING
+		GROUP BY SamplingId,DATAAREAID HAVING COUNT(*)>1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-------- Test group Test Assignment
+
+UPDATE PWC_E_TESTGRPTESTASSIGN
+	SET ERRORDESC = CONCAT(ERRORDESC,'AcceptableQuantitativeLowerTestMeasurementLimit should be lower than StandardQuantitativeTestMeasurement','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN
+	WHERE 
+		TRY_CAST(AcceptableQuantitativeLowerTestMeasurementLimit AS float) IS NOT NULL AND
+		TRY_CAST(StandardQuantitativeTestMeasurement AS float) IS NOT NULL AND
+		TRY_CAST(TOQUANTITY AS float) > TRY_CAST(StandardQuantitativeTestMeasurement AS float)
+
+UPDATE PWC_E_TESTGRPTESTASSIGN
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'AcceptableQualityLevelPercentage is not a real number','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN	
+	WHERE 
+		AcceptableQualityLevelPercentage LIKE '%[^0-9.]%' AND AcceptableQualityLevelPercentage IS NOT NULL
+
+UPDATE PWC_E_TESTGRPTESTASSIGN
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'SequenceNumber is not an integer','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN	
+	WHERE 
+		SequenceNumber LIKE '%[^0-9]%' AND SequenceNumber IS NOT NULL
+
+UPDATE PWC_E_TESTGRPTESTASSIGN
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'AcceptableQuantitativeLowerTestMeasurementLimit is not a real number','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN	
+	WHERE 
+		AcceptableQuantitativeLowerTestMeasurementLimit LIKE '%[^0-9.]%' AND AcceptableQuantitativeLowerTestMeasurementLimit IS NOT NULL
+
+UPDATE PWC_E_TESTGRPTESTASSIGN
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'AcceptableQuantitativeLowerTestMeasurementLimitPercentage is not a real number','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN	
+	WHERE 
+		AcceptableQuantitativeLowerTestMeasurementLimitPercentage LIKE '%[^0-9.]%' AND AcceptableQuantitativeLowerTestMeasurementLimitPercentage IS NOT NULL
+
+UPDATE PWC_E_TESTGRPTESTASSIGN
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'AcceptableQuantitativeUpperTestMeasurementLimit is not a real number','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN	
+	WHERE 
+		AcceptableQuantitativeUpperTestMeasurementLimit LIKE '%[^0-9.]%' AND AcceptableQuantitativeUpperTestMeasurementLimit IS NOT NULL
+
+UPDATE PWC_E_TESTGRPTESTASSIGN
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'AcceptableQuantitativeUpperTestMeasurementLimitPercentage is not a real number','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN	
+	WHERE 
+		AcceptableQuantitativeUpperTestMeasurementLimitPercentage LIKE '%[^0-9.]%' AND AcceptableQuantitativeUpperTestMeasurementLimitPercentage IS NOT NULL
+
+UPDATE PWC_E_TESTGRPTESTASSIGN
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'StandardQuantitativeTestMeasurement is not a real number','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN	
+	WHERE 
+		StandardQuantitativeTestMeasurement LIKE '%[^0-9.]%' AND StandardQuantitativeTestMeasurement IS NOT NULL
+
+UPDATE PWC_E_TESTGRPTESTASSIGN
+	SET ERRORDESC = CONCAT(ERRORDESC, 'ExpirationDateTime HAS WRONG DATE FORMAT','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'ERROR', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN
+	WHERE
+		ExpirationDateTime IS NOT NULL AND ISDATE(ExpirationDateTime) = 0
+
+ UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'AcceptableQualityLevelPercentage is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN 	
+	WHERE 
+		AcceptableQualityLevelPercentage= '' or AcceptableQualityLevelPercentage is null
+
+ UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'SequenceNumber is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN 	
+	WHERE 
+		SequenceNumber= '' or SequenceNumber is null
+
+ UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ExpirationDateTime is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN 	
+	WHERE 
+		ExpirationDateTime= '' or ExpirationDateTime is null
+
+ UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityTestGroupId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN 	
+	WHERE 
+		QualityTestGroupId= '' or QualityTestGroupId is null
+
+ UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityTestId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN 	
+	WHERE 
+		QualityTestId= '' or QualityTestId is null
+
+
+
+
+
+
+ UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'StandardQuantitativeTestMeasurement is blank despite QualitativeTestVariableId being blank ','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN 	
+	WHERE 
+		(StandardQuantitativeTestMeasurement= '' or StandardQuantitativeTestMeasurement is null) AND QualitativeTestVariableId IS NULL
+
+ UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'One of AcceptableQuantitativeLowerTestMeasurementLimit, AcceptableQuantitativeUpperTestMeasurementLimit is blank despite QualitativeTestVariableId being blank ','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN 	
+	WHERE 
+		((AcceptableQuantitativeUpperTestMeasurementLimit= '' or AcceptableQuantitativeUpperTestMeasurementLimit is null AND AcceptableQuantitativeLowerTestMeasurementLimit IS NOT NULL) OR
+		(AcceptableQuantitativeLowerTestMeasurementLimit= '' OR AcceptableQuantitativeLowerTestMeasurementLimit IS NULL AND AcceptableQuantitativeLowerTestMeasurementLimit IS NOT NULL)) AND QualitativeTestVariableId IS NULL
+
+ UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'AcceptableQuantitativeLowerTestMeasurementLimit is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN 	
+	WHERE 
+		(AcceptableQuantitativeLowerTestMeasurementLimit= '' or AcceptableQuantitativeLowerTestMeasurementLimit is null) AND QualitativeTestVariableId IS NULL
+
+ UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'AcceptableQuantitativeUpperTestMeasurementLimit is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN 	
+	WHERE 
+		(AcceptableQuantitativeUpperTestMeasurementLimit= '' or AcceptableQuantitativeUpperTestMeasurementLimit is null) AND QualitativeTestVariableId IS NULL
+
+ UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualitativeTestVariableId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN 	
+	WHERE 
+		(QualitativeTestVariableId= '' or QualitativeTestVariableId is null) AND (AcceptableQuantitativeLowerTestMeasurementLimit IS NULL AND AcceptableQuantitativeUpperTestMeasurementLimit IS NULL)
+
+UPDATE PWC_E_TESTGRPTESTASSIGN
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityTestGroupId,QualityTestId,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN	
+	WHERE 
+		QualityTestGroupId IS NOT NULL AND QualityTestId IS NOT NULL AND 
+		CONCAT(QualityTestGroupId,QualityTestId,DATAAREAID) IN 
+		(SELECT CONCAT(QualityTestGroupId,QualityTestId,DATAAREAID) FROM PWC_E_TESTGRPTESTASSIGN
+		GROUP BY QualityTestGroupId,QualityTestId,DATAAREAID HAVING COUNT(*)>1)
+
+ UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityTestGroupId is not there in QualityTestGroupId of Test groups','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN A	
+	WHERE 
+		QualityTestGroupId IS NOT NULL AND QualityTestGroupId NOT IN 
+		(SELECT B.QualityTestGroupId FROM PWC_E_TESTGRP B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.QualityTestGroupId IS NOT NULL) 
+
+ UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityTestId is not there in TestId of Quality Tests','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN A 	
+	WHERE 
+		QualityTestId IS NOT NULL AND QualityTestId NOT IN 
+		(SELECT B.TestId FROM PWC_E_QUALITYTEST B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.TestId IS NOT NULL) 
+
+ UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'TestMeasurementUnitSymbol is not there in UnitSymbol of Units','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN A	
+	WHERE 
+		TestMeasurementUnitSymbol IS NOT NULL AND TestMeasurementUnitSymbol NOT IN 
+		(SELECT B.UnitSymbol FROM PWC_E_UNIT B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.UnitSymbol IS NOT NULL)
+
+UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualitativeTestVariableId is not there in VariableId of Quality Test Variable','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN A 	
+	WHERE 
+		QualitativeTestVariableId IS NOT NULL AND QualitativeTestVariableId NOT IN 
+		(SELECT B.VariableId FROM PWC_E_QUALITYTESTVAR B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.VariableId IS NOT NULL)
+
+UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'DefaultQualitativeTestMeasurementOutcome is not there in OutcomeId of Quality Test Variable Outcome','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN A	
+	WHERE 
+		DefaultQualitativeTestMeasurementOutcome IS NOT NULL AND DefaultQualitativeTestMeasurementOutcome NOT IN 
+		(SELECT B.OutcomeId FROM PWC_E_QUALITYTESTVAROUTCOME B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.OutcomeId IS NOT NULL)
+
+UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualitativeTestVariableId, DefaultQualitativeTestMeasurementOutcome is not matching with Test variable outcome','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN A	
+	WHERE 
+		QualitativeTestVariableId IS NOT NULL AND 
+		DefaultQualitativeTestMeasurementOutcome IS NOT NULL AND 
+		CONCAT(QualitativeTestVariableId, DefaultQualitativeTestMeasurementOutcome) NOT IN 
+		(SELECT CONCAT(B.QualityTestVariableId, B.OutcomeId) FROM PWC_E_QUALITYTESTVAROUTCOME B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') 
+			AND B.OutcomeId IS NOT NULL AND B.QualityTestVariableId IS NOT NULL)
+
+ UPDATE PWC_E_TESTGRPTESTASSIGN 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityTestId, TestMeasurementUnitSymbol is not atching with Quality Tests','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN A 	
+	WHERE 
+		QualityTestId IS NOT NULL AND
+		TestMeasurementUnitSymbol IS NOT NULL AND
+		CONCAT(QualityTestId, TestMeasurementUnitSymbol) NOT IN
+		(SELECT CONCAT(B.TestId,TestMeasurementUnitSymbol)  FROM PWC_E_QUALITYTEST B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.TestId IS NOT NULL) 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+------------- Quality Order Creation Policy V2
+
+ UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'Both ItemNumber and QUALITYGROUPID cannot be present for a single record','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL 	
+	WHERE 
+		ItemNumber is NOT NULL AND QUALITYGROUPID IS NOT NULL
+
+ UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'RouteOperationId is not blank when QualityOrderCreationPolicyType is production','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL 	
+	WHERE 
+		RouteOperationId IS NOT NULL AND QualityOrderCreationPolicyType LIKE '%product%'
+
+ UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ItemNumber is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL 	
+	WHERE 
+		ItemNumber= '' or ItemNumber is null
+
+ UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'RouteOperationId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL 	
+	WHERE 
+		(RouteOperationId= '' or RouteOperationId is null) AND QualityOrderCreationPolicyType LIKE '%ROUTE%'
+
+ UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'AcceptableQualityLevelPercentage is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL 	
+	WHERE 
+		AcceptableQualityLevelPercentage= '' or AcceptableQualityLevelPercentage is null
+
+ UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'BlockedDocumentationProcess is null','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL 	
+	WHERE 
+		BlockedDocumentationProcess= '' or BlockedDocumentationProcess is null
+
+ UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ItemSamplingId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL 	
+	WHERE 
+		ItemSamplingId= '' or ItemSamplingId is null
+
+ UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityOrderCreationPolicyType is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL 	
+	WHERE 
+		QualityOrderCreationPolicyType= '' or QualityOrderCreationPolicyType is null
+
+ UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'IsQualityOrderFailureCreatingQuantineOrder is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL 	
+	WHERE 
+		IsQualityOrderFailureCreatingQuantineOrder= '' or IsQualityOrderFailureCreatingQuantineOrder is null
+
+ UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityOrderCreationDocumentationEventStage is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL 	
+	WHERE 
+		QualityOrderCreationDocumentationEventStage= '' or QualityOrderCreationDocumentationEventStage is null
+
+ UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityTestGroupId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL 	
+	WHERE 
+		QualityTestGroupId= '' or QualityTestGroupId is null
+
+ UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityOrderCreationPolicyType has invalid enum values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL 	
+	WHERE 
+		QualityOrderCreationPolicyType IS NOT NULL AND QualityOrderCreationPolicyType NOT IN
+		(SELECT MEMBERNAME FROM RETAILENUMVALUETABLE WHERE ENUMNAME LIKE 'InventTestReferenceType')
+
+ UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityOrderCreationDocumentationEventStage has invalid enum values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL 	
+	WHERE 
+		QualityOrderCreationDocumentationEventStage IS NOT NULL AND QualityOrderCreationDocumentationEventStage NOT IN
+		(SELECT MEMBERNAME FROM RETAILENUMVALUETABLE WHERE ENUMNAME LIKE 'InventTestExecution')
+
+
+UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'OperationalSiteId is not there in SITEID of Sites','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL A	
+	WHERE 
+		OperationalSiteId IS NOT NULL AND OperationalSiteId NOT IN 
+		(SELECT B.SITEID FROM PWC_E_SITEERP B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.SITEID IS NOT NULL)
+
+
+UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ItemNumber is not there in ITEMNUMBER of Released Products','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL A	
+	WHERE 
+		ItemNumber IS NOT NULL AND ItemNumber NOT IN 
+		(SELECT B.ITEMNUMBER FROM PWC_E_ECORESRELEASEDPRODUCTV2STAGING B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL' OR UPPER(A.DATAAREAID) = 'GLOBAL') AND B.ITEMNUMBER IS NOT NULL)
+
+UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ItemSamplingId is not there in SamplingId of item Sampling','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL A	
+	WHERE 
+		ItemSamplingId IS NOT NULL AND ItemSamplingId NOT IN 
+		(SELECT B.SamplingId FROM PWC_E_ITEMSAMPLING B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.SamplingId IS NOT NULL)
+
+UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'QualityTestGroupId is not there in QualityTestGroupId of Test Groups','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL A	
+	WHERE 
+		QualityTestGroupId IS NOT NULL AND QualityTestGroupId NOT IN 
+		(SELECT B.QualityTestGroupId FROM PWC_E_TESTGRP B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.QualityTestGroupId IS NOT NULL)
+
+UPDATE PWC_E_QUALITYORDERCREATIONPOL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'RouteOperationId is not there in OperationId of Operations','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL A	
+	WHERE 
+		RouteOperationId IS NOT NULL AND RouteOperationId NOT IN 
+		(SELECT B.OperationId FROM PWC_E_OPERATIONS B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.OperationId IS NOT NULL)
+
+
+
+
+

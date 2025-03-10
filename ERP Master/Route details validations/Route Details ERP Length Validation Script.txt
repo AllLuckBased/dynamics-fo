@@ -1,0 +1,39 @@
+Route Details ERP Length Validation script
+
+Route Details----
+
+UPDATE PWC_E_ROUTEDETAILS 
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'RouteCode exceeds max length 12','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_ROUTEDETAILS	
+	WHERE 
+		LEN(RouteCode) > 12
+
+UPDATE PWC_E_ROUTEDETAILS 
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'Name exceeds max length 50','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_ROUTEDETAILS	
+	WHERE 
+		LEN(Name) > 50
+
+UPDATE PWC_E_ROUTEDETAILS 
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'VehicleCode exceeds max length 12','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_ROUTEDETAILS	
+	WHERE 
+		LEN(VehicleCode) > 12
+
+UPDATE PWC_E_ROUTEDETAILS 
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'HHTDeviceSerialNumber exceeds max length 100','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_ROUTEDETAILS	
+	WHERE 
+		LEN(HHTDeviceSerialNumber) > 100
+
+UPDATE PWC_E_ROUTEDETAILS 
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'JourneyPlanCode exceeds max length 10','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_ROUTEDETAILS	
+	WHERE 
+		LEN(JourneyPlanCode) > 10
+

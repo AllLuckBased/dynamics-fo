@@ -1,0 +1,400 @@
+Production Order ERP Pilot Validation
+
+
+
+------------------------- Validation Rules --------------------------------
+
+-----> Production order sequence groups
+
+GroupId is null --- Error --- 2
+GroupDescription is null --- Warning --- 3
+
+GroupId has duplicate values --- Constraint --- 1
+
+
+
+
+
+
+----> Production order sequence group priority
+
+ProductionOrderSequencingGroupId is null --- Error --- 2
+ProductionOrderSequencingSequenceId is null --- Error --- 2
+Rank is null --- Warning --- 3
+
+ProductionOrderSequencingGroupId,ProductionOrderSequencingSequenceId has duplicate values --- Constraint --- 1
+
+ProductionOrderSequencingGroupId is not there in GroupId of Production Order sequence groups --- Error --- 2
+
+
+
+
+
+
+----> Production order sequence ids
+
+SequenceId is null --- Error --- 2
+SequenceDescription is null --- Warning --- 3
+
+SequenceId has duplicate values --- Constraint --- 1
+
+
+
+
+
+
+
+-----> Production order sequence values
+
+ProductionOrderSequencingSequenceId is null --- Error --- 2
+SequenceValue is null --- Error --- 2
+Rank is null --- Warning --- 3
+
+ProductionOrderSequencingSequenceId,SequenceValue has duplicate values --- Constraint --- 1
+
+ProductionOrderSequencingSequenceId is not there in SequenceId of Production Order sequence IDs --- Error --- 2
+
+
+
+
+
+
+
+
+
+-----> Production order sequence priority for item
+
+ItemNumber is null --- Warning --- 3
+ProductGroupId is null --- Warning --- 3
+ProductionOrderSequencingSequenceValue is null --- Warning --- 3
+ProductionOrderSequencingSequenceId is null --- Warning --- 3
+
+ItemNumber,ProductGroupId,ProductionOrderSequencingSequenceId has duplicate values --- Constraint --- 1
+
+ItemNumber is not there in ITEMNUMBER of Released Products --- Error --- 2
+ProductGroupId is not there in GROUPID of Item Groups --- Error --- 2
+ProductionOrderSequencingSequenceValue is not there in SequenceValue of Production Order Sequence Values --- Error --- 2
+ProductionOrderSequencingSequenceId is not there in SequenceId of Production Order sequence IDs --- Error --- 2
+ProductionOrderSequencingSequenceId,ProductionOrderSequencingSequenceValue is not there in ProductionOrderSequencingSequenceId,SequenceValue of Production Order Sequence Values --- Error --- 2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-------------------------------------- Validation Scripts ------------------------------------
+
+-----> Production order sequence groups
+
+UPDATE PWC_E_PRODODERSEQGROUPS 
+	SET ERRORDESC = CONCAT(ERRORDESC,'GroupId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_PRODODERSEQGROUPS	
+	WHERE 
+		GroupId= '' or GroupId is null
+
+UPDATE PWC_E_PRODODERSEQGROUPS 
+	SET ERRORDESC = CONCAT(ERRORDESC,'GroupDescription is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_PRODODERSEQGROUPS	
+	WHERE 
+		GroupDescription= '' or GroupDescription is null
+
+UPDATE PWC_E_PRODODERSEQGROUPS
+	SET ERRORDESC = CONCAT(ERRORDESC,'GroupId,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_PRODODERSEQGROUPS
+	WHERE
+		GroupId IS NOT NULL AND DATAAREAID IS NOT NULL AND CONCAT(GroupId,DATAAREAID) IN 
+		(SELECT CONCAT(GroupId,DATAAREAID) FROM PWC_E_PRODODERSEQGROUPS
+		GROUP BY GroupId,DATAAREAID HAVING COUNT(*)>1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+----> Production order sequence group priority
+
+UPDATE PWC_E_PRODORDERSEQGRPPRIORITY 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ProductionOrderSequencingGroupId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_PRODORDERSEQGRPPRIORITY	
+	WHERE 
+		ProductionOrderSequencingGroupId= '' or ProductionOrderSequencingGroupId is null
+
+UPDATE PWC_E_PRODORDERSEQGRPPRIORITY 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ProductionOrderSequencingSequenceId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_PRODORDERSEQGRPPRIORITY	
+	WHERE 
+		ProductionOrderSequencingSequenceId= '' or ProductionOrderSequencingSequenceId is null
+
+UPDATE PWC_E_PRODORDERSEQGRPPRIORITY 
+	SET ERRORDESC = CONCAT(ERRORDESC,'Rank is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_PRODORDERSEQGRPPRIORITY	
+	WHERE 
+		Rank= '' or Rank is null
+
+UPDATE PWC_E_PRODORDERSEQGRPPRIORITY
+	SET ERRORDESC = CONCAT(ERRORDESC,'ProductionOrderSequencingGroupId,ProductionOrderSequencingSequenceId,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_PRODORDERSEQGRPPRIORITY
+	WHERE 
+		ProductionOrderSequencingGroupId IS NOT NULL AND ProductionOrderSequencingSequenceId IS NOT NULL AND DATAAREAID IS NOT NULL AND CONCAT(ProductionOrderSequencingGroupId,ProductionOrderSequencingSequenceId,DATAAREAID) IN 
+		(SELECT CONCAT(ProductionOrderSequencingGroupId,ProductionOrderSequencingSequenceId,DATAAREAID) FROM PWC_E_PRODORDERSEQGRPPRIORITY
+		GROUP BY ProductionOrderSequencingGroupId,ProductionOrderSequencingSequenceId,DATAAREAID HAVING COUNT(*)>1)
+
+UPDATE PWC_E_PRODORDERSEQGRPPRIORITY
+	SET ERRORDESC = CONCAT(ERRORDESC,'ProductionOrderSequencingGroupId,Rank,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_PRODORDERSEQGRPPRIORITY
+	WHERE 
+		ProductionOrderSequencingGroupId IS NOT NULL AND Rank IS NOT NULL AND DATAAREAID IS NOT NULL AND CONCAT(ProductionOrderSequencingGroupId,Rank,DATAAREAID) IN 
+		(SELECT CONCAT(ProductionOrderSequencingGroupId,Rank,DATAAREAID) FROM PWC_E_PRODORDERSEQGRPPRIORITY
+		GROUP BY ProductionOrderSequencingGroupId,Rank,DATAAREAID HAVING COUNT(*)>1)
+
+UPDATE PWC_E_PRODORDERSEQGRPPRIORITY 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ProductionOrderSequencingGroupId is not there in GroupId of Production Order sequence groups','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_PRODORDERSEQGRPPRIORITY A
+	WHERE 
+		ProductionOrderSequencingGroupId IS NOT NULL AND ProductionOrderSequencingGroupId NOT IN 
+		(SELECT B.GroupId FROM PWC_E_PRODODERSEQGROUPS B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL' OR UPPER(A.DATAAREAID) = 'GLOBAL') AND B.GroupId IS NOT NULL)
+
+UPDATE PWC_E_PRODORDERSEQGRPPRIORITY 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ProductionOrderSequencingSequenceId is not there in SequenceId of Production Order sequence ids','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_PRODORDERSEQGRPPRIORITY A
+	WHERE 
+		ProductionOrderSequencingSequenceId IS NOT NULL AND ProductionOrderSequencingSequenceId NOT IN 
+		(SELECT B.SequenceId FROM PWC_E_PRODORDESEQID B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL' OR UPPER(A.DATAAREAID) = 'GLOBAL') AND B.SequenceId IS NOT NULL)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+----> Production order sequence ids
+
+UPDATE PWC_E_PRODORDESEQID 
+	SET ERRORDESC = CONCAT(ERRORDESC,'SequenceId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_PRODORDESEQID	
+	WHERE 
+		SequenceId= '' or SequenceId is null
+
+UPDATE PWC_E_PRODORDESEQID 
+	SET ERRORDESC = CONCAT(ERRORDESC,'SequenceDescription is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_PRODORDESEQID	
+	WHERE 
+		SequenceDescription= '' or SequenceDescription is null
+
+UPDATE PWC_E_PRODORDESEQID
+	SET ERRORDESC = CONCAT(ERRORDESC,'SequenceId,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_PRODORDESEQID
+	WHERE
+		SequenceId IS NOT NULL AND DATAAREAID IS NOT NULL AND CONCAT(SequenceId,DATAAREAID) IN 
+		(SELECT CONCAT(SequenceId,DATAAREAID) FROM PWC_E_PRODORDESEQID
+		GROUP BY SequenceId,DATAAREAID HAVING COUNT(*)>1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-----> Production order sequence values
+
+UPDATE PWC_E_PRODORDERSEQVAL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ProductionOrderSequencingSequenceId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_PRODORDERSEQVAL	
+	WHERE 
+		ProductionOrderSequencingSequenceId= '' or ProductionOrderSequencingSequenceId is null
+
+UPDATE PWC_E_PRODORDERSEQVAL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'SequenceValue is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_PRODORDERSEQVAL	
+	WHERE 
+		SequenceValue= '' or SequenceValue is null
+
+UPDATE PWC_E_PRODORDERSEQVAL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'Rank is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_PRODORDERSEQVAL	
+	WHERE 
+		Rank= '' or Rank is null
+
+
+
+UPDATE PWC_E_PRODORDERSEQVAL
+	SET ERRORDESC = CONCAT(ERRORDESC,'ProductionOrderSequencingSequenceId,SequenceValue,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_PRODORDERSEQVAL
+	WHERE 
+		ProductionOrderSequencingSequenceId IS NOT NULL AND SequenceValue IS NOT NULL AND DATAAREAID IS NOT NULL AND CONCAT(ProductionOrderSequencingSequenceId,SequenceValue,DATAAREAID) IN 
+		(SELECT CONCAT(ProductionOrderSequencingSequenceId,SequenceValue,DATAAREAID) FROM PWC_E_PRODORDERSEQVAL
+		GROUP BY ProductionOrderSequencingSequenceId,SequenceValue,DATAAREAID HAVING COUNT(*)>1)
+
+UPDATE PWC_E_PRODORDERSEQVAL 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ProductionOrderSequencingSequenceId is not there in SequenceId of Production Order sequence IDs','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_PRODORDERSEQVAL A
+	WHERE 
+		ProductionOrderSequencingSequenceId IS NOT NULL AND ProductionOrderSequencingSequenceId NOT IN 
+		(SELECT B.SequenceId FROM PWC_E_PRODORDESEQID B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL' OR UPPER(A.DATAAREAID) = 'GLOBAL') AND B.SequenceId IS NOT NULL)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-----> Production order sequence priority for item
+
+UPDATE PWC_E_PRODORDERDEQPRIORITYITEM 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ItemNumber is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_PRODORDERDEQPRIORITYITEM	
+	WHERE 
+		ItemNumber= '' or ItemNumber is null
+
+UPDATE PWC_E_PRODORDERDEQPRIORITYITEM 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ProductionOrderSequencingSequenceValue is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_PRODORDERDEQPRIORITYITEM	
+	WHERE 
+		ProductionOrderSequencingSequenceValue= '' or ProductionOrderSequencingSequenceValue is null
+
+UPDATE PWC_E_PRODORDERDEQPRIORITYITEM 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ProductionOrderSequencingSequenceId is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_PRODORDERDEQPRIORITYITEM	
+	WHERE 
+		ProductionOrderSequencingSequenceId= '' or ProductionOrderSequencingSequenceId is null
+
+UPDATE PWC_E_PRODORDERDEQPRIORITYITEM
+	SET ERRORDESC = CONCAT(ERRORDESC,'ItemNumber,ProductGroupId,ProductionOrderSequencingSequenceId,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_PRODORDERDEQPRIORITYITEM
+	WHERE 
+		ItemNumber IS NOT NULL AND ProductGroupId IS NOT NULL AND ProductionOrderSequencingSequenceId IS NOT NULL AND DATAAREAID IS NOT NULL AND
+		CONCAT(ItemNumber,ProductGroupId,ProductionOrderSequencingSequenceId,DATAAREAID) IN 
+		(SELECT CONCAT(ItemNumber,ProductGroupId,ProductionOrderSequencingSequenceId,DATAAREAID) FROM PWC_E_PRODORDERDEQPRIORITYITEM
+		GROUP BY ItemNumber,ProductGroupId,ProductionOrderSequencingSequenceId,DATAAREAID HAVING COUNT(*)>1)
+
+UPDATE PWC_E_PRODORDERDEQPRIORITYITEM 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ItemNumber is not there in ITEMNUMBER of Released Products','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_PRODORDERDEQPRIORITYITEM A
+	WHERE 
+		ItemNumber IS NOT NULL AND ItemNumber NOT IN 
+		(SELECT B.ITEMNUMBER FROM PWC_E_ECORESRELEASEDPRODUCTV2STAGING B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL' OR UPPER(A.DATAAREAID) = 'GLOBAL') AND B.ITEMNUMBER IS NOT NULL)
+
+UPDATE PWC_E_PRODORDERDEQPRIORITYITEM 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ProductGroupId is not there in GROUPID of Item Groups','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_PRODORDERDEQPRIORITYITEM A
+	WHERE 
+		ProductGroupId IS NOT NULL AND ProductGroupId NOT IN 
+		(SELECT B.GROUPID FROM PWC_E_ITEMGROUPS B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL' OR UPPER(A.DATAAREAID) = 'GLOBAL') AND B.GROUPID IS NOT NULL)
+
+UPDATE PWC_E_PRODORDERDEQPRIORITYITEM 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ProductionOrderSequencingSequenceValue is not there in SequenceValue of Production Order Sequence Values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_PRODORDERDEQPRIORITYITEM A
+	WHERE 
+		ProductionOrderSequencingSequenceValue IS NOT NULL AND ProductionOrderSequencingSequenceValue NOT IN 
+		(SELECT B.SequenceValue FROM PWC_E_PRODORDERSEQVAL B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL' OR UPPER(A.DATAAREAID) = 'GLOBAL') AND B.SequenceValue IS NOT NULL)
+
+UPDATE PWC_E_PRODORDERDEQPRIORITYITEM 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ProductionOrderSequencingSequenceId is not there in SequenceId of Production Order sequence IDs','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_PRODORDERDEQPRIORITYITEM A
+	WHERE 
+		ProductionOrderSequencingSequenceId IS NOT NULL AND ProductionOrderSequencingSequenceId NOT IN 
+		(SELECT B.SequenceId FROM PWC_E_PRODORDESEQID B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL' OR UPPER(A.DATAAREAID) = 'GLOBAL') AND B.SequenceId IS NOT NULL)
+
+UPDATE PWC_E_PRODORDERDEQPRIORITYITEM 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ProductionOrderSequencingSequenceId,ProductionOrderSequencingSequenceValue is not there in SequenceValue of Production Order Sequence Values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_PRODORDERDEQPRIORITYITEM A
+	WHERE 
+		ProductionOrderSequencingSequenceValue IS NOT NULL AND
+		ProductionOrderSequencingSequenceId IS NOT NULL AND
+		CONCAT(ProductionOrderSequencingSequenceId, ProductionOrderSequencingSequenceValue, DATAAREAID) NOT IN 
+		(SELECT CONCAT(B.ProductionOrderSequencingSequenceId, B.SequenceValue, B.DATAAREAID) FROM PWC_E_PRODORDERSEQVAL B WHERE (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL' OR UPPER(A.DATAAREAID) = 'GLOBAL') AND B.SequenceValue IS NOT NULL AND B.ProductionOrderSequencingSequenceId IS NOT NULL)
+
+
+

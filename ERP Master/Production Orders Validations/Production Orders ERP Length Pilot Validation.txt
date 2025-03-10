@@ -1,0 +1,62 @@
+Production Orders ERP Length Pilot Validation
+
+
+Production order sequence groups---
+
+UPDATE PWC_E_PRODODERSEQGROUPS
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'GroupId exceeds max length 20','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_PRODODERSEQGROUPS
+	WHERE 
+		LEN(GroupId) > 20
+
+UPDATE PWC_E_PRODODERSEQGROUPS
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'GroupDescription exceeds max length 60','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_PRODODERSEQGROUPS
+	WHERE 
+		LEN(GroupDescription) > 60
+
+
+
+Production order sequence group priority---
+
+UPDATE PWC_E_PRODORDERSEQGRPPRIORITY
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'ProductionOrderSequencingSequenceId exceeds max length 10','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_PRODORDERSEQGRPPRIORITY
+	WHERE 
+		LEN(ProductionOrderSequencingSequenceId) > 10
+
+
+
+Production order sequence ids---
+
+UPDATE PWC_E_PRODORDESEQID
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'SequenceId exceeds max length 10','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_PRODORDESEQID
+	WHERE 
+		LEN(SequenceId) > 10
+
+UPDATE PWC_E_PRODORDESEQID
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'SequenceDescription exceeds max length 60','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_PRODORDESEQID
+	WHERE 
+		LEN(SequenceDescription) > 60
+
+
+
+Production order sequence values---
+
+UPDATE PWC_E_PRODORDERSEQVAL
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'SequenceValue exceeds max length 25','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_PRODORDERSEQVAL
+	WHERE 
+		LEN(SequenceValue) > 25
+
+
+
+

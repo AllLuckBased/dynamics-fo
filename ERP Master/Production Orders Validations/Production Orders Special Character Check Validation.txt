@@ -1,0 +1,59 @@
+Production Orders Special Character Check Pilot Validation
+
+
+
+Production order sequence groups---
+
+UPDATE PWC_E_PRODODERSEQGROUPS
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'GroupId has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_PRODODERSEQGROUPS
+	WHERE 
+	GroupId LIKE '%[^A-Za-z0-9_-]%'
+
+UPDATE PWC_E_PRODODERSEQGROUPS
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'GroupDescription has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_PRODODERSEQGROUPS
+	WHERE 
+	GroupDescription LIKE '%[^A-Za-z0-9 -]%'
+
+
+
+
+Production order sequence group priority---
+
+
+UPDATE PWC_E_PRODORDERSEQGRPPRIORITY
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'ProductionOrderSequencingSequenceId has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_PRODORDERSEQGRPPRIORITY
+	WHERE 
+	ProductionOrderSequencingSequenceId LIKE '%[^A-Za-z0-9_-]%'
+
+
+Production order sequence ids---
+
+UPDATE PWC_E_PRODORDESEQID
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'SequenceId has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_PRODORDESEQID
+	WHERE 
+	SequenceId LIKE '%[^A-Za-z0-9-_ ]%'
+
+UPDATE PWC_E_PRODORDESEQID
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'SequenceDescription has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_PRODORDESEQID
+	WHERE 
+	SequenceDescription LIKE '%[^A-Za-z0-9 -]%'
+
+
+Production order sequence values---
+
+UPDATE PWC_E_PRODORDERSEQVAL
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'SequenceValue has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_PRODORDERSEQVAL
+	WHERE 
+	SequenceValue LIKE '%[^A-Za-z0-9_-]%'

@@ -1,0 +1,148 @@
+Quality ERP Special Character Check Pilot Validation
+
+Quality Test Instruments---
+
+UPDATE PWC_E_QUALITYTESTINSTRUMENT
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'InstrumentId has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_QUALITYTESTINSTRUMENT
+	WHERE 
+	InstrumentId LIKE '%[^A-Za-z0-9 -_]%'
+
+UPDATE PWC_E_QUALITYTESTINSTRUMENT
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'InstrumentDescription has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_QUALITYTESTINSTRUMENT
+	WHERE 
+	InstrumentDescription LIKE '%[^A-Za-z,/_0-9 -]%'
+
+
+Quality Test---
+
+UPDATE PWC_E_QUALITYTEST
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'TestDescription has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_QUALITYTEST
+	WHERE 
+	TestDescription LIKE '%[^A-Za-z/%&.0-9 ''-]%'
+
+UPDATE PWC_E_QUALITYTEST
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'TestId has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_QUALITYTEST
+	WHERE 
+	TestId LIKE '%[^A-Za-z/%&0-9 ''-]%'
+
+
+Quality Test groups---
+
+UPDATE PWC_E_TESTGRP
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'Description has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_TESTGRP
+	WHERE 
+	Description LIKE '%[^A-Za-z0-9 ).(''-]%'
+
+UPDATE PWC_E_TESTGRP
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'QualityTestGroupId has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_TESTGRP
+	WHERE 
+	QualityTestGroupId LIKE '%[^A-Za-z0-9-]%'
+
+
+Quality Test Variable---
+
+UPDATE PWC_E_QUALITYTESTVAR
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'VariableId has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_QUALITYTESTVAR
+	WHERE 
+	VariableId LIKE '%[^A-Za-z0-9 -]%'
+
+UPDATE PWC_E_QUALITYTESTVAR
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'VariableDescription has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_QUALITYTESTVAR
+	WHERE 
+	VariableDescription LIKE '%[^A-Za-z0-9 -]%'
+
+
+Quality Test Variable Outcome---
+
+UPDATE PWC_E_QUALITYTESTVAROUTCOME
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'OutcomeId has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_QUALITYTESTVAROUTCOME
+	WHERE 
+	OutcomeId LIKE '%[^A-Za-z0-9-]%'
+
+UPDATE PWC_E_QUALITYTESTVAROUTCOME
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'OutcomeDescription has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_QUALITYTESTVAROUTCOME
+	WHERE 
+	OutcomeDescription LIKE '%[^A-Za-z0-9 -]%'
+
+
+Item Sampling---
+
+UPDATE PWC_E_ITEMSAMPLING
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'SamplingId has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_ITEMSAMPLING
+	WHERE 
+	SamplingId LIKE '%[^A-Za-z0-9-]%'
+
+UPDATE PWC_E_ITEMSAMPLING
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'SamplingDescription has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_ITEMSAMPLING
+	WHERE 
+	SamplingDescription LIKE '%[^A-Za-z0-9 -]%'
+
+
+Quality Order Creation Policy V2---
+
+UPDATE PWC_E_QUALITYORDERCREATIONPOL
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'QualityGroupId has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL
+	WHERE 
+	QualityGroupId LIKE '%[^A-Za-z0-9-]%'
+
+UPDATE PWC_E_QUALITYORDERCREATIONPOL
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'RouteOperationId has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_QUALITYORDERCREATIONPOL
+	WHERE 
+	RouteOperationId LIKE '%[^A-Za-z0-9-]%'
+
+
+
+
+
+
+
+------------- Quality Test Grp Test Assignment
+
+UPDATE PWC_E_TESTGRPTESTASSIGN
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'AcceptableQuantitativeLowerTestMeasurementLimit has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN
+	WHERE 
+	AcceptableQuantitativeLowerTestMeasurementLimit LIKE '%[^0-9.]%'
+
+UPDATE PWC_E_TESTGRPTESTASSIGN
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'AcceptableQuantitativeUpperTestMeasurementLimit has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN
+	WHERE 
+	AcceptableQuantitativeUpperTestMeasurementLimit LIKE '%[^0-9.]%'
+
+UPDATE PWC_E_TESTGRPTESTASSIGN
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'StandardQuantitativeTestMeasurement has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_TESTGRPTESTASSIGN
+	WHERE 
+	StandardQuantitativeTestMeasurement LIKE '%[^0-9.]%'
