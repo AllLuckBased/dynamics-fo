@@ -1,0 +1,28 @@
+Units ERP Special Character Check Pilot Validation
+
+
+Units---
+UPDATE PWC_E_UNIT
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'UnitDescription has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_UNIT
+	WHERE 
+	UnitDescription LIKE '%[^A-Za-z0-9 -/.]%'
+
+
+
+Unit Conversions--
+
+UPDATE PWC_E_UNITCONVERSION
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'FromUnitSymbol has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_UNITCONVERSION
+	WHERE 
+	FromUnitSymbol LIKE '%[^A-Za-z0-9 -/.]%'
+
+UPDATE PWC_E_UNITCONVERSION
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'ToUnitSymbol has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_UNITCONVERSION
+	WHERE 
+	ToUnitSymbol LIKE '%[^A-Za-z0-9 -/.]%'

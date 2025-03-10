@@ -1,0 +1,37 @@
+Credit notes ERP Special Character validation Script
+
+
+Return Reason Code---
+
+UPDATE PWC_E_ReturnReasonCodeStaging
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'REASONCODE has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_ReturnReasonCodeStaging
+	WHERE 
+		REASONCODE LIKE '%[^A-Za-z0-9_-]%'
+
+UPDATE PWC_E_ReturnReasonCodeStaging
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'REASONDESCRIPTION has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_ReturnReasonCodeStaging
+	WHERE 
+		REASONDESCRIPTION LIKE '%[^A-Za-z0-9() _-]%'
+
+
+Return Reason Code Groups---
+
+
+UPDATE PWC_E_ReturnReasonCodeGroupStaging
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'GROUPID has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_ReturnReasonCodeGroupStaging
+	WHERE 
+		GROUPID LIKE '%[^A-Za-z0-9_-]%'
+
+UPDATE PWC_E_ReturnReasonCodeGroupStaging
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'GROUPDESCRIPTION has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_ReturnReasonCodeGroupStaging
+	WHERE 
+		GROUPDESCRIPTION LIKE '%[^A-Za-z0-9 _-]%'
+

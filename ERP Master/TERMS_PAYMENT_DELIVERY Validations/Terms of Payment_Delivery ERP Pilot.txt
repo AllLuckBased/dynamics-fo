@@ -1,0 +1,225 @@
+Terms of Payment_Delivery ERP Pilot Validation
+
+
+
+
+---------- Validation Rules ----------------
+
+----> Terms of Payment
+
+Name is blank --- Error --- 2
+CashPaymentMainAccountIdDisplayValue is blank --- Warning --- 3
+IsCashPayment is blank --- Warning --- 3
+CreditCardCreditCheckType is blank --- Warning --- 3
+CreditCardPaymentType is blank --- Warning --- 3
+CustomerDueDateUpdatePolicy is blank --- Warning --- 3
+IsDefaultPaymentTerm is blank --- Warning --- 3
+Description is blank --- Warning --- 3
+NumberOfDays is blank --- Warning --- 3
+PaymentMethodType is blank --- Warning --- 3
+VendorDueDateUpdatePolicy is blank --- Warning --- 3
+CreditCardCreditCheck
+CreditCardCreditCheckType enum has invalid enum values --- Error --- 2
+CreditCardPaymentType
+CreditCardPaymentType enum has invalid enum values --- Error --- 2
+PaymentDueDateUpdatePolicy
+CustomerDueDateUpdatePolicy enum has invalid enum values --- Error --- 2
+NetCurrent
+PaymentMethodType enum has invalid enum values --- Error --- 2
+PaymentDueDateUpdatePolicy
+VendorDueDateUpdatePolicy enum has invalid enum values --- Error --- 2
+CashPaymentMainAccountIdDisplayValue is not there in MAINACCOUNTID of Main Account --- Error --- 2
+Name has duplicate values --- Constraint --- 1
+
+
+
+
+
+------> Terms of Delivery
+
+TermsCode is null --- Error --- 2
+TermsDescription is null --- Warning --- 3
+WillShipmentConfirmationTransferCharges is null --- Warning --- 3
+
+TermsCode has duplicate values --- Constraint ---- 1
+
+
+
+------------------ Validation Script -----------------
+
+
+---- Terms of Payment
+
+UPDATE PWC_E_TERMSOFPAYMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'PaymentMethodType is not "NET" for Advance Payments. (Since the spelling of Advance can be different, do a sanity check also if error is thrown)','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+		PaymentMethodType NOT LIKE "NET" AND Description LIKE '%ADV%'
+
+UPDATE PWC_E_TERMSOFPAYMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'NumberOfDays is not "0" for Advance Payments. (Since the spelling of Advance can be different, do a sanity check also if error is thrown)','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+		NumberOfDays NOT LIKE "0" AND Description LIKE '%ADV%'
+
+UPDATE PWC_E_TERMSOFPAYMENT
+	SET ERRORDESC = CONCAT(ERRORDESC,'Name is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+		Name= '' or Name is null
+
+UPDATE PWC_E_TERMSOFPAYMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'NumberOfDays is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+		NumberOfDays= '' or NumberOfDays is null
+
+UPDATE PWC_E_TERMSOFPAYMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'PaymentMethodType is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+		PaymentMethodType= '' or PaymentMethodType is null
+
+UPDATE PWC_E_TERMSOFPAYMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'IsDefaultPaymentTerm is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+		IsDefaultPaymentTerm= '' or IsDefaultPaymentTerm is null
+
+UPDATE PWC_E_TERMSOFPAYMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'Description is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+		Description= '' or Description is null
+
+UPDATE PWC_E_TERMSOFPAYMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'CreditCardCreditCheckType enum has invalid enum values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+		CreditCardCreditCheckType IS NOT NULL AND CreditCardCreditCheckType NOT IN
+		(SELECT MEMBERNAME FROM RETAILENUMVALUETABLE WHERE ENUMNAME LIKE 'CreditCardCreditCheck')
+
+UPDATE PWC_E_TERMSOFPAYMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'CreditCardPaymentType enum has invalid enum values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+		CreditCardPaymentType IS NOT NULL AND CreditCardPaymentType NOT IN
+		(SELECT MEMBERNAME FROM RETAILENUMVALUETABLE WHERE ENUMNAME LIKE 'CreditCardPaymentType')
+
+UPDATE PWC_E_TERMSOFPAYMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'CustomerDueDateUpdatePolicy enum has invalid enum values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+		CustomerDueDateUpdatePolicy IS NOT NULL AND CustomerDueDateUpdatePolicy NOT IN
+		(SELECT MEMBERNAME FROM RETAILENUMVALUETABLE WHERE ENUMNAME LIKE 'PaymentDueDateUpdatePolicy')
+
+UPDATE PWC_E_TERMSOFPAYMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'PaymentMethodType enum has invalid enum values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+		PaymentMethodType IS NOT NULL AND PaymentMethodType NOT IN
+		(SELECT MEMBERNAME FROM RETAILENUMVALUETABLE WHERE ENUMNAME LIKE 'NetCurrent')
+
+UPDATE PWC_E_TERMSOFPAYMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'VendorDueDateUpdatePolicy enum has invalid enum values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+		VendorDueDateUpdatePolicy IS NOT NULL AND VendorDueDateUpdatePolicy NOT IN
+		(SELECT MEMBERNAME FROM RETAILENUMVALUETABLE WHERE ENUMNAME LIKE 'PaymentDueDateUpdatePolicy')
+
+UPDATE PWC_E_TERMSOFPAYMENT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'CashPaymentMainAccountIdDisplayValue is not there in MAINACCOUNTID of Main Account','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT A
+	WHERE 
+		CashPaymentMainAccountIdDisplayValue IS NOT NULL AND CashPaymentMainAccountIdDisplayValue NOT IN 
+		(SELECT B.MAINACCOUNTID FROM PWC_E_MAINACCOUNT B WHERE B.ErrorDesc IS NULL AND B.ErrorDesc2 IS NULL AND (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.MAINACCOUNTID IS NOT NULL)
+
+UPDATE PWC_E_TERMSOFPAYMENT
+	SET ERRORDESC = CONCAT(ERRORDESC,'Name,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+		Name IS NOT NULL AND DATAAREAID IS NOT NULL AND CONCAT(Name,DATAAREAID) IN 
+		(SELECT CONCAT(Name,DATAAREAID) FROM PWC_E_TERMSOFPAYMENT
+		GROUP BY Name,DATAAREAID HAVING COUNT(*)>1)
+
+UPDATE PWC_E_TERMSOFPAYMENT
+	SET ERRORDESC = CONCAT(ERRORDESC,'PaymentMethodType,NumberOfDays,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+		PaymentMethodType IS NOT NULL AND NumberOfDays IS NOT NULL AND DATAAREAID IS NOT NULL AND CONCAT(PaymentMethodType,NumberOfDays,DATAAREAID) IN 
+		(SELECT CONCAT(PaymentMethodType,NumberOfDays,DATAAREAID) FROM PWC_E_TERMSOFPAYMENT
+		GROUP BY PaymentMethodType,DATAAREAID HAVING COUNT(*)>1)
+
+UPDATE PWC_E_TERMSOFPAYMENT
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'NumberOfDays is not an intger','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, ' Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT	
+	WHERE NumberOfDays LIKE '%[^0-9]%'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+----- Terms of Delivery
+
+ UPDATE PWC_E_TERMSOFDELIVERY 
+	SET ERRORDESC = CONCAT(ERRORDESC,'TermsCode is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_TERMSOFDELIVERY 	
+	WHERE 
+		TermsCode= '' or TermsCode is null
+
+ UPDATE PWC_E_TERMSOFDELIVERY 
+	SET ERRORDESC = CONCAT(ERRORDESC,'TermsDescription is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_TERMSOFDELIVERY 	
+	WHERE 
+		TermsDescription= '' or TermsDescription is null
+
+ UPDATE PWC_E_TERMSOFDELIVERY 
+	SET ERRORDESC = CONCAT(ERRORDESC,'WillShipmentConfirmationTransferCharges is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_TERMSOFDELIVERY 	
+	WHERE 
+		WillShipmentConfirmationTransferCharges= '' or WillShipmentConfirmationTransferCharges is null
+
+ UPDATE PWC_E_TERMSOFDELIVERY 
+	SET ERRORDESC = CONCAT(ERRORDESC,'TermsCode,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_TERMSOFDELIVERY 	
+	WHERE 
+		TermsCode IS NOT NULL AND DATAAREAID IS NOT NULL AND CONCAT(TermsCode,DATAAREAID) IN 
+		(SELECT CONCAT(TermsCode,DATAAREAID)FROM PWC_E_TERMSOFDELIVERY
+		GROUP BY TermsCode,DATAAREAID HAVING COUNT(*)>1)
+
+
+
+
+
+

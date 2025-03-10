@@ -1,0 +1,46 @@
+Credit notes ERP Length Validation Script
+
+
+Return Reason Code---
+
+UPDATE PWC_E_ReturnReasonCodeStaging
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'REASONCODE exceeds max length 10','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_ReturnReasonCodeStaging	
+	WHERE 
+		LEN(REASONCODE) > 10
+
+
+UPDATE PWC_E_ReturnReasonCodeStaging
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'REASONDESCRIPTION exceeds max length 60','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_ReturnReasonCodeStaging	
+	WHERE 
+		LEN(REASONDESCRIPTION) > 60
+
+UPDATE PWC_E_ReturnReasonCodeStaging
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'CUSTOMERRETURNREASONCODEGROUPID exceeds max length 10','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_ReturnReasonCodeStaging	
+	WHERE 
+		LEN(CUSTOMERRETURNREASONCODEGROUPID) > 10
+
+
+
+Return Reason Code Groups---
+
+
+
+UPDATE PWC_E_ReturnReasonCodeGroupStaging
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'GROUPID exceeds max length 10','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_ReturnReasonCodeGroupStaging	
+	WHERE 
+		LEN(GROUPID) > 10
+
+UPDATE PWC_E_ReturnReasonCodeGroupStaging
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'GROUPDESCRIPTION exceeds max length 60','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_ReturnReasonCodeGroupStaging	
+	WHERE 
+		LEN(GROUPDESCRIPTION) > 60

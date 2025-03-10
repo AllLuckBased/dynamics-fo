@@ -1,0 +1,21 @@
+Xnapp Authorized Item Master ERP Validation Script
+
+
+Xnapp Authorized Item Master---
+
+
+UPDATE PWC_E_XNAPPITEMMASTER
+	SET ERRORDESC = CONCAT(ERRORDESC,'AuthorizedItemMasterCode is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_XNAPPITEMMASTER	
+	WHERE 
+		AuthorizedItemMasterCode= '' or AuthorizedItemMasterCode is null
+
+ UPDATE PWC_E_XNAPPITEMMASTER 
+	SET ERRORDESC = CONCAT(ERRORDESC,'AuthorizedItemMasterCode,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_XNAPPITEMMASTER	
+	WHERE 
+		AuthorizedItemMasterCode IS NOT NULL AND DATAAREAID IS NOT NULL AND CONCAT(AuthorizedItemMasterCode,DATAAREAID) IN 
+		(SELECT CONCAT(AuthorizedItemMasterCode,DATAAREAID) FROM PWC_E_XNAPPITEMMASTER
+		GROUP BY AuthorizedItemMasterCode,DATAAREAID HAVING COUNT(*)>1)

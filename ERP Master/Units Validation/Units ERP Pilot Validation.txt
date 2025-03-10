@@ -1,0 +1,193 @@
+Units ERP Pilot Validation
+
+
+----------- Validation Rules ------------
+
+
+-----> Units
+
+UnitSymbol is null --- Error --- 2
+DecimalPrecision is null --- Warning --- 3
+SystemOfUnits is null --- Warning --- 3
+UnitClass is null --- Warning --- 3
+UnitDescription is null --- Warning --- 3
+
+UnitSymbol has duplicate values --- Constraint --- 1
+
+SystemOfUnits has invalid enum values --- Error --- 2
+UnitClass  has invalid enum values --- Error --- 2
+
+
+
+
+
+
+-----> Unit Conversions
+
+Denominator is null --- Error --- 2
+Factor is null --- Error --- 2
+Numerator is null--- Error --- 2
+FromUnitSymbol is null--- Error --- 2
+ToUnitSymbol is null --- Error --- 2
+Rounding is null --- Warning --- 3
+
+FromUnitSymbol,ToUnitSymbol has duplicate values --- Constraint ---- 1
+
+Rounding has invalid enum values --- Error --- 2
+
+FromUnitSymbol is not there in UnitSymbol of Units --- Error --- 2
+ToUnitSymbol is not there in UnitSymbol of Units --- Error --- 2
+
+
+
+
+
+
+
+
+
+----------------- Validation Scripts -----------------
+
+
+---------> Units
+
+ UPDATE PWC_E_UNIT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'UnitSymbol is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_UNIT 	
+	WHERE 
+		UnitSymbol= '' or UnitSymbol is null
+
+ UPDATE PWC_E_UNIT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'SystemOfUnits is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_UNIT 	
+	WHERE 
+		SystemOfUnits= '' or SystemOfUnits is null
+
+ UPDATE PWC_E_UNIT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'UnitClass is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_UNIT 	
+	WHERE 
+		UnitClass= '' or UnitClass is null
+
+ UPDATE PWC_E_UNIT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'UnitDescription is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_UNIT 	
+	WHERE 
+		UnitDescription= '' or UnitDescription is null
+
+ UPDATE PWC_E_UNIT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'UnitSymbol,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_UNIT 	
+	WHERE 
+		UnitSymbol IS NOT NULL AND DATAAREAID IS NOT NULL AND CONCAT(UnitSymbol,DATAAREAID) IN 
+		(SELECT CONCAT(UnitSymbol,DATAAREAID) FROM PWC_E_UNIT
+		GROUP BY UnitSymbol,DATAAREAID HAVING COUNT(*)>1)
+
+ UPDATE PWC_E_UNIT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'SystemOfUnits has invalid enum values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_UNIT 	
+	WHERE 
+		SystemOfUnits IS NOT NULL AND SystemOfUnits NOT IN
+		(SELECT MEMBERNAME FROM RETAILENUMVALUETABLE WHERE ENUMNAME LIKE 'UnitOfMeasureSystemOfUnits')
+
+ UPDATE PWC_E_UNIT 
+	SET ERRORDESC = CONCAT(ERRORDESC,'UnitClass has invalid enum values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_UNIT 	
+	WHERE 
+		UnitClass IS NOT NULL AND UnitClass NOT IN
+		(SELECT MEMBERNAME FROM RETAILENUMVALUETABLE WHERE ENUMNAME LIKE 'UnitOfMeasureClass')
+
+
+
+
+
+
+
+
+
+
+
+------> Unit Conversions
+
+ UPDATE PWC_E_UNITCONVERSION 
+	SET ERRORDESC = CONCAT(ERRORDESC,'Denominator is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_UNITCONVERSION 	
+	WHERE 
+		Denominator= '' or Denominator is null
+
+ UPDATE PWC_E_UNITCONVERSION 
+	SET ERRORDESC = CONCAT(ERRORDESC,'Factor is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_UNITCONVERSION 	
+	WHERE 
+		Factor= '' or Factor is null
+
+ UPDATE PWC_E_UNITCONVERSION 
+	SET ERRORDESC = CONCAT(ERRORDESC,'Numerator is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_UNITCONVERSION 	
+	WHERE 
+		Numerator= '' or Numerator is null
+
+ UPDATE PWC_E_UNITCONVERSION 
+	SET ERRORDESC = CONCAT(ERRORDESC,'FromUnitSymbol is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_UNITCONVERSION 	
+	WHERE 
+		FromUnitSymbol= '' or FromUnitSymbol is null
+
+ UPDATE PWC_E_UNITCONVERSION 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ToUnitSymbol is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_UNITCONVERSION 	
+	WHERE 
+		ToUnitSymbol= '' or ToUnitSymbol is null
+
+ UPDATE PWC_E_UNITCONVERSION 
+	SET ERRORDESC = CONCAT(ERRORDESC,'Rounding is blank','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Warning', '; ')
+	FROM PWC_E_UNITCONVERSION 	
+	WHERE 
+		Rounding= '' or Rounding is null
+
+ UPDATE PWC_E_UNITCONVERSION 
+	SET ERRORDESC = CONCAT(ERRORDESC,'FromUnitSymbol,ToUnitSymbol,DATAAREAID has duplicate values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Constraint', '; ')
+	FROM PWC_E_UNITCONVERSION 	
+	WHERE 
+		FromUnitSymbol IS NOT NULL AND ToUnitSymbol IS NOT NULL AND DATAAREAID IS NOT NULL AND CONCAT(FromUnitSymbol,ToUnitSymbol,DATAAREAID) IN 
+		(SELECT CONCAT(FromUnitSymbol,ToUnitSymbol,DATAAREAID) FROM PWC_E_UNITCONVERSION
+		GROUP BY FromUnitSymbol,ToUnitSymbol,DATAAREAID HAVING COUNT(*)>1)
+
+UPDATE PWC_E_UNITCONVERSION 
+	SET ERRORDESC = CONCAT(ERRORDESC,'FromUnitSymbol is not there in UnitSymbol of Units','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_UNITCONVERSION A
+	WHERE 
+		FromUnitSymbol IS NOT NULL AND FromUnitSymbol NOT IN 
+		(SELECT B.UnitSymbol FROM PWC_E_UNIT B WHERE B.ErrorDesc IS NULL AND B.ErrorDesc2 IS NULL AND (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.UnitSymbol IS NOT NULL)
+
+UPDATE PWC_E_UNITCONVERSION 
+	SET ERRORDESC = CONCAT(ERRORDESC,'ToUnitSymbol is not there in UnitSymbol of Units','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_UNITCONVERSION A	
+	WHERE 
+		ToUnitSymbol IS NOT NULL AND ToUnitSymbol NOT IN 
+		(SELECT B.UnitSymbol FROM PWC_E_UNIT B WHERE B.ErrorDesc IS NULL AND B.ErrorDesc2 IS NULL AND (B.DATAAREAID = A.DATAAREAID OR UPPER(B.DATAAREAID) = 'GLOBAL') AND B.UnitSymbol IS NOT NULL)
+
+ UPDATE PWC_E_UNITCONVERSION
+	SET ERRORDESC = CONCAT(ERRORDESC,'Rounding has invalid enum values','; ')
+	,ERRORSTATUS = CONCAT(ERRORSTATUS, 'Error', '; ')
+	FROM PWC_E_UNITCONVERSION	
+	WHERE 
+		Rounding IS NOT NULL AND Rounding NOT IN
+		(SELECT MEMBERNAME FROM RETAILENUMVALUETABLE WHERE ENUMNAME LIKE 'UnitOfMeasureConversionRounding')
+

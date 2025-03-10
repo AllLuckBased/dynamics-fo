@@ -1,0 +1,32 @@
+Units ERP Length Pilot Validation
+
+Units--
+UPDATE PWC_E_UNIT
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'UnitSymbol exceeds max length 10','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_UNIT	
+	WHERE 
+		LEN(UnitSymbol) > 10
+
+UPDATE PWC_E_UNIT
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'UnitDescription exceeds max length 60','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_UNIT	
+	WHERE 
+		LEN(UnitDescription) > 60
+
+
+Unit Conversions--
+UPDATE PWC_E_UNITCONVERSION
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'FromUnitSymbol exceeds max length 10','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_UNITCONVERSION	
+	WHERE 
+		LEN(FromUnitSymbol) > 10
+
+UPDATE PWC_E_UNITCONVERSION
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'ToUnitSymbol exceeds max length 10','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_UNITCONVERSION	
+	WHERE 
+		LEN(ToUnitSymbol) > 10

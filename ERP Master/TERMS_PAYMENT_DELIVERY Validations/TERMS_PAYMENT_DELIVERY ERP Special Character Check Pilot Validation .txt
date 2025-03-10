@@ -1,0 +1,45 @@
+TERMS_PAYMENT_DELIVERY ERP Special Character Check Pilot Validation
+
+
+
+TERMS OF PAYMENT---
+
+UPDATE PWC_E_TERMSOFPAYMENT
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'CashPaymentMainAccountIdDisplayValue has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+	CashPaymentMainAccountIdDisplayValue LIKE '%[^A-Za-z0-9 -]%'
+
+UPDATE PWC_E_TERMSOFPAYMENT
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'Description has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+	Description LIKE '%[^A-Za-z0-9 -]%'
+
+UPDATE PWC_E_TERMSOFPAYMENT
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'Name has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_TERMSOFPAYMENT
+	WHERE 
+	Name LIKE '%[^A-Za-z0-9 -]%'
+
+
+
+TERMS OF DELIVERY---
+
+UPDATE PWC_E_TERMSOFDELIVERY
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'TermsCode has special characters and/or blank spaces','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_TERMSOFDELIVERY
+	WHERE 
+	TermsCode LIKE '%[^A-Za-z0-9-]%'
+
+
+UPDATE PWC_E_TERMSOFDELIVERY
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'TermsDescription has special characters','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Error', '; ')
+	FROM PWC_E_TERMSOFDELIVERY
+	WHERE 
+	TermsDescription LIKE '%[^A-Za-z)0-9 (,.-]%'

@@ -1,0 +1,18 @@
+Xnapp Authorized Item Master length ERP Validation Script
+
+
+Xnapp Authorized Item Master---
+
+UPDATE PWC_E_XNAPPITEMMASTER 
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'AuthorizedItemMasterCode exceeds max length 10','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_XNAPPITEMMASTER	
+	WHERE 
+		LEN(AuthorizedItemMasterCode) > 10
+
+UPDATE PWC_E_XNAPPITEMMASTER 
+	SET ERRORDESC2 = CONCAT(ERRORDESC2,'Description exceeds max length 60','; ')
+	,ERRORSTATUS2 = CONCAT(ERRORSTATUS2, 'Constraint', '; ')
+	FROM PWC_E_XNAPPITEMMASTER	
+	WHERE 
+		LEN(Description) > 60
