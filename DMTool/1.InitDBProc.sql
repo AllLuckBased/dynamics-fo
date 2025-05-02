@@ -1,0 +1,61 @@
+CREATE OR ALTER PROCEDURE PWC_SP_INITDB
+AS
+BEGIN
+
+	IF EXISTS 
+		(SELECT 1 FROM INFORMATION_SCHEMA.TABLES 
+		WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME='PWCERRORTABLE') 
+	drop table PWCERRORTABLE
+
+	IF EXISTS 
+		(SELECT 1 FROM INFORMATION_SCHEMA.TABLES 
+		WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME='PWCCATEGORY') 
+	drop table PWCCATEGORY
+
+	IF EXISTS 
+		(SELECT 1 FROM INFORMATION_SCHEMA.TABLES 
+		WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME='PWCSTATUS') 
+	drop table PWCSTATUS
+
+	CREATE TABLE PWCSTATUS(
+		ID INT PRIMARY KEY,
+		DESCRIPTION VARCHAR(20) NOT NULL
+	)
+	INSERT INTO PWCSTATUS VALUES
+		(0, 'Success'), 
+		(1, 'Nice to have'), 
+		(2, 'Warning'), 
+		(3, 'Error')
+
+	CREATE TABLE PWCCATEGORY(
+		ID INT PRIMARY KEY,
+		STATUS INT NOT NULL,
+		DESCRIPTION VARCHAR(50) NOT NULL,
+		FOREIGN KEY(STATUS) REFERENCES PWCSTATUS(ID)
+	)
+	INSERT INTO PWCCATEGORY VALUES 
+		(0, 0, 'None'),
+		(1, 3, 'Mandatory field missing'),
+		(2, 3, 'Invalid data type'),
+		(3, 3, 'Duplicate occurrence'),
+		(4, 3, 'Invalid submaster reference'),
+		(5, 3, 'Submaster has error'),
+		(6, 3, 'Other system checks failed'),
+		(7, 2, 'String length mismatch'),
+		(8, 2, 'Business required field missing'),
+		(9, 2, 'Business required validation failed'),
+		(10, 3, 'Mandatory Business required validation failed')
+
+	CREATE TABLE PWCERRORTABLE(
+		TABLEID VARCHAR(100) NOT NULL,
+		ERRORCOLUMN nvarchar(146),
+		ROWID INT NOT NULL,
+		CATEGORY INT NOT NULL,
+		ERRORDESC nvarchar(max),
+		ERRORVALUE NVARCHAR(250),
+		DATAAREAID NVARCHAR(6)
+		PRIMARY KEY(TABLEID, ROWID, CATEGORY, ERRORCOLUMN, ERRORVALUE),
+		FOREIGN KEY(CATEGORY) REFERENCES PWCCATEGORY(ID)
+	)
+
+END
